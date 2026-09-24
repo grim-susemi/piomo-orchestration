@@ -3,10 +3,11 @@
   "repository": "piomo-orchestration",
   "displayName": "PiOMO Orchestration Mod",
   "visibility": "private",
-  "description": "Source-only publish boundary for the curated private repository. Evaluation order: (1) an exact allowedPaths entry always allows a path; (2) otherwise a deniedPatterns match prohibits it; (3) otherwise an allowedPatterns glob allows it; (4) otherwise the path is prohibited by default. Every file, allowed or not, is additionally inspected for secret tokens by qa/audit-publish.mjs. Rights: UNLICENSED owner-authored files, except the four MIT-licensed senpi prompt-preset resolver regex lines recorded in provenance/components.json with the verbatim upstream notice carried in full at licenses/senpi-MIT.txt; unknown-rights third-party code is excluded. No generated OMO bundles, downloaded upstream trees, archives, raw machine settings/auth/models/trust, pr-watch snapshots, logs, cache, session, memory, rollback or retired guard/compaction files may be published.",
+  "description": "Source-only publish boundary for the curated private repository. Evaluation order: (1) an exact allowedPaths entry always allows a path; (2) otherwise a deniedPatterns match prohibits it; (3) otherwise an allowedPatterns glob allows it; (4) otherwise the path is prohibited by default. Every file, allowed or not, is additionally inspected for secret tokens by qa/audit-publish.mjs. Rights: UNLICENSED owner-authored portions, Senpi MIT regexes and engine anchors, and OmO Sustainable Use License original context, all recorded in provenance/components.json with complete terms at licenses/senpi-MIT.txt and licenses/omo-SUL.txt; unknown-rights third-party code is excluded. No generated OMO bundles, downloaded upstream trees, archives, raw machine settings/auth/models/trust, pr-watch snapshots, logs, cache, session, memory, rollback or retired guard/compaction files may be published. The refresh-04 staged sources are allowed by exact allowedPaths entries only: the 17 source/test/pin files under patches/refresh-04/** plus the stage-2 identity metadata (provenance/refresh-04.json) and docs/version-history-contract.md; no refresh-04 wildcard, no install helper, no EVENT-CONTRACT.md, no .orig snapshot, no generated output.",
   "allowedPaths": [
     "provenance/allowlist.json",
     "licenses/senpi-MIT.txt",
+    "licenses/omo-SUL.txt",
     "provenance/components.json",
     "provenance/license-scope.json",
     "provenance/installed-state.json",
@@ -40,7 +41,26 @@
     "packages/piomo-personal-skills/README.md",
     "packages/piomo-personal-skills/duplicates.json",
     "provenance/source-adaptations.json",
-    "scripts/pr-watch.prune.test.mjs"
+    "scripts/pr-watch.prune.test.mjs",
+    "docs/version-history-contract.md",
+    "provenance/refresh-04.json",
+    "patches/refresh-04/engine-bridge/build-transform.mjs",
+    "patches/refresh-04/engine-bridge/inputid-identity.test.mjs",
+    "patches/refresh-04/engine-bridge/lib.mjs",
+    "patches/refresh-04/engine-bridge/originaltext.test.mjs",
+    "patches/refresh-04/engine-bridge/pins.json",
+    "patches/refresh-04/engine-bridge/rollback-guard.test.mjs",
+    "patches/refresh-04/engine-bridge/tool-effect-lifecycle.test.mjs",
+    "patches/refresh-04/patches/deltas/slot-4-gateRepair.insert.js",
+    "patches/refresh-04/patches/deltas/todo-7-retry.insert.js",
+    "patches/refresh-04/patches/deltas/todo-8-quota.insert.js",
+    "patches/refresh-04/patches/deltas/todo-9-health.insert.js",
+    "patches/refresh-04/qa/bundle-health-anchor.mjs",
+    "patches/refresh-04/qa/gate-repair-anchor.mjs",
+    "patches/refresh-04/qa/gate-request-fixture.test.mjs",
+    "patches/refresh-04/qa/quota-routing-anchor.mjs",
+    "patches/refresh-04/qa/rebuild-ledger.mjs",
+    "patches/refresh-04/qa/retry-budget-anchor.mjs"
   ],
   "allowedPatterns": [
     "patches/beta88/deltas/*.insert.js",
@@ -51,8 +71,7 @@
     "packages/piomo-personal-skills/skills.json",
     "packages/piomo-personal-skills/skills/**",
     "packages/*/src/**",
-    "packages/*/test/**",
-    "docs/*.md"
+    "packages/*/test/**"
   ],
   "deniedPatterns": [
     "**/*.tgz",

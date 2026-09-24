@@ -1,0 +1,251 @@
+{
+  "schema": "omo-beta88-engine-bridge/pins/v1",
+  "lane": "engine-bridge",
+  "task": "st_01a0d1d7",
+  "goal": "Staged senpi engine delta: expose original pre-transform user input as event.originalText to every input handler, make the engine inputId identity lifetime-unique, and add the single registered-tool effect lifecycle (synchronous tool_effect_before + promise-derived tool_effect_settled) at the tool wrapper immediately before definition.execute.",
+  "baseRoot": "base/senpi",
+  "outputRoot": "target/engine-bridge",
+  "manifestRel": "manifest.json",
+  "package": {
+    "name": "@code-yeongyu/senpi",
+    "version": "2026.9.23-5"
+  },
+  "contract": {
+    "originalText": "Every input extension handler receives event.originalText = the original pre-transform user input text; it is constant across the handler chain while event.text stays the current (possibly transformed) text.",
+    "inputId": "inputId remains the single engine-generated identity shared by the input event and its later input_disposition event; the value is extended with a per-host-instance token so a recreated host of the same session can never regenerate an earlier inputId.",
+    "toolEffect": "One registered-tool effect lifecycle per session, owned by the ExtensionRunner: the tool wrapper (used for registered AND built-in tools) emits a synchronous non-swallowed tool_effect_before immediately before definition.execute - after every tool_call blocker and scheduler skip, so blocked/skipped calls emit zero effects - then exactly one tool_effect_settled derived from the actual definition promise (ok/isError/error; synthetic abort never settles early). Full shape and method names are published in EVENT-CONTRACT.md.",
+    "fieldNames": "New field names: originalText, tool_effect_before, tool_effect_settled (plus their event fields). Slot-4 already reads event.originalText and keys its journal on the opaque event.inputId, so no rename is required."
+  },
+  "files": [
+    {
+      "relpath": "dist/core/extensions/runner.js",
+      "sha256": "a7bef394fba1922a1844722f2b35e6215dbd4ae8e01e179a1335d2563767d5af",
+      "bytes": 68325,
+      "transforms": [
+        {
+          "anchor": "text: currentText,\n                        images: currentImages,",
+          "replacement": "text: currentText,\n                        originalText: text,\n                        images: currentImages,",
+          "expectedCount": 1,
+          "insertMarker": "originalText: text",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        },
+        {
+          "anchor": "    async emitToolCall(event) {",
+          "replacement": "    /**\n     * Emit the synchronous `tool_effect_before` reservation for one admitted tool invocation.\n     * Handlers must be synchronous: their first throw propagates and blocks the invocation.\n     * Called by the tool wrapper immediately before definition.execute, after every\n     * tool_call blocker and scheduler skip.\n     */\n    emitToolEffectBefore(event) {\n        for (const ext of this.extensions) {\n            const handlers = ext.handlers.get(\"tool_effect_before\");\n            if (!handlers || handlers.length === 0)\n                continue;\n            for (const handler of handlers) {\n                const handlerResult = handler(event, this.createContext(ext.path));\n                if (handlerResult !== undefined && typeof handlerResult.then === \"function\") {\n                    throw new Error(\"tool_effect_before handlers must be synchronous\");\n                }\n            }\n        }\n    }\n    /**\n     * Emit the single `tool_effect_settled` record for one admitted tool invocation,\n     * derived from the actual definition promise outcome. Handler failures are reported\n     * through the extension error channel and never change the tool result.\n     */\n    async emitToolEffectSettled(event) {\n        for (const ext of this.extensions) {\n            const handlers = ext.handlers.get(\"tool_effect_settled\");\n            if (!handlers || handlers.length === 0)\n                continue;\n            for (const handler of handlers) {\n                try {\n                    await handler(event, this.createContext(ext.path));\n                }\n                catch (err) {\n                    const message = err instanceof Error ? err.message : String(err);\n                    const stack = err instanceof Error ? err.stack : undefined;\n                    this.emitError({\n                        extensionPath: ext.path,\n                        event: \"tool_effect_settled\",\n                        error: message,\n                        stack,\n                    });\n                }\n            }\n        }\n    }\n    async emitToolCall(event) {",
+          "expectedCount": 1,
+          "insertMarker": "async emitToolEffectSettled(event) {",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        }
+      ]
+    },
+    {
+      "relpath": "dist/core/extensions/types.d.ts",
+      "sha256": "fe5240513f159b8fe28a00a10df37b31b12894fcf956be56bdd820e7e62a8ef8",
+      "bytes": 97033,
+      "transforms": [
+        {
+          "anchor": "    /** The input text */\n    text: string;",
+          "replacement": "    /** The input text */\n    text: string;\n    /** The original pre-transform user input text; constant across the input handler chain. */\n    originalText: string;",
+          "expectedCount": 1,
+          "insertMarker": "originalText: string;",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        },
+        {
+          "anchor": "    /** Correlates this input with its eventual disposition within the session. */",
+          "replacement": "    /** Correlates this input with its eventual disposition within the session; lifetime-unique per input and never reused across host recreations. */",
+          "expectedCount": 1,
+          "insertMarker": "lifetime-unique per input and never reused across host recreations",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        },
+        {
+          "anchor": "    /** Matches the originating InputEvent. */\n    inputId: string;",
+          "replacement": "    /** Matches the originating InputEvent; same lifetime-unique identity. */\n    inputId: string;",
+          "expectedCount": 1,
+          "insertMarker": "same lifetime-unique identity",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        },
+        {
+          "anchor": "export declare function isBashToolResult(e: ToolResultEvent): e is BashToolResultEvent;",
+          "replacement": "/** Fired synchronously immediately before an admitted tool definition executes. */\nexport interface ToolEffectBeforeEvent {\n    type: \"tool_effect_before\";\n    toolCallId: string;\n    toolName: string;\n    /** Final arguments passed to the tool definition. */\n    input: unknown;\n}\n/** Fired exactly once after the actual tool definition promise settles. */\nexport interface ToolEffectSettledEvent {\n    type: \"tool_effect_settled\";\n    toolCallId: string;\n    toolName: string;\n    /** Final arguments passed to the tool definition. */\n    input: unknown;\n    /** True when the definition promise resolved (regardless of the resolved result's isError). */\n    ok: boolean;\n    /** The resolved result's error flag when ok is true. */\n    isError?: boolean;\n    /** The thrown error message when ok is false. */\n    error?: string;\n}\nexport declare function isBashToolResult(e: ToolResultEvent): e is BashToolResultEvent;",
+          "expectedCount": 1,
+          "insertMarker": "export interface ToolEffectSettledEvent {",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        },
+        {
+          "anchor": "InputEvent | InputDispositionEvent | ToolCallEvent | ToolResultEvent;",
+          "replacement": "InputEvent | InputDispositionEvent | ToolCallEvent | ToolResultEvent | ToolEffectBeforeEvent | ToolEffectSettledEvent;",
+          "expectedCount": 1,
+          "insertMarker": "ToolEffectBeforeEvent | ToolEffectSettledEvent;",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        },
+        {
+          "anchor": "    on(event: \"tool_result\", handler: ExtensionHandler<ToolResultEvent, ToolResultEventResult>): void;",
+          "replacement": "    on(event: \"tool_result\", handler: ExtensionHandler<ToolResultEvent, ToolResultEventResult>): void;\n    on(event: \"tool_effect_before\", handler: ExtensionHandler<ToolEffectBeforeEvent, void>): void;\n    on(event: \"tool_effect_settled\", handler: ExtensionHandler<ToolEffectSettledEvent, void>): void;",
+          "expectedCount": 1,
+          "insertMarker": "handler: ExtensionHandler<ToolEffectBeforeEvent, void>",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        }
+      ]
+    },
+    {
+      "relpath": "dist/core/agent-session.js",
+      "sha256": "2e09991555bbea1446bee3f6e0d2bf334343ca0cf17a228c13625caa3b4b8ba9",
+      "bytes": 388009,
+      "tokenFn": "randomUUID",
+      "tokenFnDeclaration": "import { randomUUID } from \"node:crypto\";",
+      "transforms": [
+        {
+          "anchor": "`${this.sessionManager.getSessionId()}:${++this._nextInputId}`",
+          "replacement": "`${this.sessionManager.getSessionId()}:${++this._nextInputId}:${this._inputHostToken ??= randomUUID()}`",
+          "expectedCount": 2,
+          "insertMarker": "this._inputHostToken ??= randomUUID()",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 2
+        },
+        {
+          "anchor": "The input keeps the\n     * session-scoped `inputId` identity, so the `input_disposition` event a handler\n     * observes correlates with the input it saw.",
+          "replacement": "The input keeps a\n     * lifetime-unique `inputId` identity (stable across host recreation of the same\n     * session), so the `input_disposition` event a handler observes correlates with\n     * the input it saw.",
+          "expectedCount": 1,
+          "insertMarker": "lifetime-unique `inputId` identity (stable across host recreation",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        }
+      ]
+    },
+    {
+      "relpath": "dist/core/extensions/wrapper.js",
+      "sha256": "2b982ac483b2318b022338d4741fd2aa38dbae2afb7918503008e430e7c7507f",
+      "bytes": 2030,
+      "transforms": [
+        {
+          "anchor": "        execute: async (toolCallId, params, signal, onUpdate) => {\n            const activeBefore = runner.getActiveTools();\n            const invocation = createToolContext?.(signal);\n            let result;\n            try {\n                result = await registeredTool.definition.execute(toolCallId, params, signal, onUpdate, invocation?.context ?? runner.createContext());\n            }\n            finally {\n                invocation?.dispose();\n            }",
+          "replacement": "        execute: async (toolCallId, params, signal, onUpdate) => {\n            const activeBefore = runner.getActiveTools();\n            const invocation = createToolContext?.(signal);\n            let result;\n            try {\n                runner.emitToolEffectBefore({\n                    type: \"tool_effect_before\",\n                    toolCallId,\n                    toolName: registeredTool.definition.name,\n                    input: params,\n                });\n                let effectFailure;\n                try {\n                    result = await registeredTool.definition.execute(toolCallId, params, signal, onUpdate, invocation?.context ?? runner.createContext());\n                }\n                catch (err) {\n                    effectFailure = err;\n                }\n                await runner.emitToolEffectSettled({\n                    type: \"tool_effect_settled\",\n                    toolCallId,\n                    toolName: registeredTool.definition.name,\n                    input: params,\n                    ok: effectFailure === undefined,\n                    ...(effectFailure === undefined ? { isError: result?.isError === true } : { error: effectFailure instanceof Error ? effectFailure.message : String(effectFailure) }),\n                });\n                if (effectFailure !== undefined)\n                    throw effectFailure;\n            }\n            finally {\n                invocation?.dispose();\n            }",
+          "expectedCount": 1,
+          "insertMarker": "runner.emitToolEffectBefore({",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        }
+      ]
+    },
+    {
+      "relpath": "dist/core/extensions/runner.d.ts",
+      "sha256": "84a26abc200f8f5fdfb8383fc22444098aa0f2e43da1880c51c54dbdc75fc73f",
+      "bytes": 14104,
+      "transforms": [
+        {
+          "anchor": "ToolCallEvent, ToolCallEventResult, ToolResultEvent, ToolResultEventResult,",
+          "replacement": "ToolCallEvent, ToolCallEventResult, ToolEffectBeforeEvent, ToolEffectSettledEvent, ToolResultEvent, ToolResultEventResult,",
+          "expectedCount": 1,
+          "insertMarker": "ToolEffectBeforeEvent, ToolEffectSettledEvent,",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        },
+        {
+          "anchor": "    emitToolCall(event: ToolCallEvent): Promise<ToolCallEventResult | undefined>;",
+          "replacement": "    emitToolCall(event: ToolCallEvent): Promise<ToolCallEventResult | undefined>;\n    emitToolEffectBefore(event: ToolEffectBeforeEvent): void;\n    emitToolEffectSettled(event: ToolEffectSettledEvent): Promise<void>;",
+          "expectedCount": 1,
+          "insertMarker": "emitToolEffectSettled(event: ToolEffectSettledEvent): Promise<void>;",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        }
+      ]
+    },
+    {
+      "relpath": "dist/bundle/chunks/chunk-RRSND33J.js",
+      "sha256": "cb247dce3c390a8cc87494b98c1acc7f7fa9218a7935d94c065e0a9ab32904ba",
+      "bytes": 3642475,
+      "tokenFn": "randomUUID11",
+      "tokenFnDeclaration": "randomUUID as randomUUID11}from\"node:crypto\"",
+      "transforms": [
+        {
+          "anchor": "inputId,text:currentText,images:currentImages,source,streamingBehavior}",
+          "replacement": "inputId,text:currentText,originalText:text2,images:currentImages,source,streamingBehavior}",
+          "expectedCount": 1,
+          "insertMarker": "originalText:text2",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        },
+        {
+          "anchor": "`${this.sessionManager.getSessionId()}:${++this._nextInputId}`",
+          "replacement": "`${this.sessionManager.getSessionId()}:${++this._nextInputId}:${this._inputHostToken ??= randomUUID11()}`",
+          "expectedCount": 2,
+          "insertMarker": "this._inputHostToken ??= randomUUID11()",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 2
+        },
+        {
+          "anchor": "async emitToolCall(event){",
+          "replacement": "emitToolEffectBefore(event){for(let ext of this.extensions){let handlers=ext.handlers.get(\"tool_effect_before\");if(!handlers||handlers.length===0)continue;for(let handler of handlers){let handlerResult=handler(event,this.createContext(ext.path));if(handlerResult!==void 0&&typeof handlerResult.then===\"function\")throw new Error(\"tool_effect_before handlers must be synchronous\")}}}async emitToolEffectSettled(event){for(let ext of this.extensions){let handlers=ext.handlers.get(\"tool_effect_settled\");if(!handlers||handlers.length===0)continue;for(let handler of handlers){try{await handler(event,this.createContext(ext.path))}catch(err){let message=err instanceof Error?err.message:String(err),stack=err instanceof Error?err.stack:void 0;this.emitError({extensionPath:ext.path,event:\"tool_effect_settled\",error:message,stack})}}}}async emitToolCall(event){",
+          "expectedCount": 1,
+          "insertMarker": "async emitToolEffectSettled(event){",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        },
+        {
+          "anchor": "execute:async(toolCallId,params,signal,onUpdate)=>{let activeBefore=runner.getActiveTools(),invocation=createToolContext?.(signal),result3;try{result3=await registeredTool.definition.execute(toolCallId,params,signal,onUpdate,invocation?.context??runner.createContext())}finally{invocation?.dispose()}",
+          "replacement": "execute:async(toolCallId,params,signal,onUpdate)=>{let activeBefore=runner.getActiveTools(),invocation=createToolContext?.(signal),result3;try{runner.emitToolEffectBefore({type:\"tool_effect_before\",toolCallId,toolName:registeredTool.definition.name,input:params});let effectFailure;try{result3=await registeredTool.definition.execute(toolCallId,params,signal,onUpdate,invocation?.context??runner.createContext())}catch(err){effectFailure=err}await runner.emitToolEffectSettled({type:\"tool_effect_settled\",toolCallId,toolName:registeredTool.definition.name,input:params,ok:effectFailure===void 0,...(effectFailure===void 0?{isError:result3?.isError===!0}:{error:effectFailure instanceof Error?effectFailure.message:String(effectFailure)})});if(effectFailure!==void 0)throw effectFailure}finally{invocation?.dispose()}",
+          "expectedCount": 1,
+          "insertMarker": "runner.emitToolEffectBefore({",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        }
+      ]
+    },
+    {
+      "relpath": "dist/bundle/chunks/session-worker.js",
+      "sha256": "4fc3b9dc1baa8245f05e193d7b9e989a2b20dd983c0989cfccf0de44b0cbb880",
+      "bytes": 14016241,
+      "tokenFn": "randomUUID16",
+      "tokenFnDeclaration": "randomUUID as randomUUID16}from\"node:crypto\"",
+      "transforms": [
+        {
+          "anchor": "inputId,text:currentText,images:currentImages,source:source2,streamingBehavior}",
+          "replacement": "inputId,text:currentText,originalText:text2,images:currentImages,source:source2,streamingBehavior}",
+          "expectedCount": 1,
+          "insertMarker": "originalText:text2",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        },
+        {
+          "anchor": "`${this.sessionManager.getSessionId()}:${++this._nextInputId}`",
+          "replacement": "`${this.sessionManager.getSessionId()}:${++this._nextInputId}:${this._inputHostToken ??= randomUUID16()}`",
+          "expectedCount": 2,
+          "insertMarker": "this._inputHostToken ??= randomUUID16()",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 2
+        },
+        {
+          "anchor": "async emitToolCall(event){",
+          "replacement": "emitToolEffectBefore(event){for(let ext of this.extensions){let handlers=ext.handlers.get(\"tool_effect_before\");if(!handlers||handlers.length===0)continue;for(let handler of handlers){let handlerResult=handler(event,this.createContext(ext.path));if(handlerResult!==void 0&&typeof handlerResult.then===\"function\")throw new Error(\"tool_effect_before handlers must be synchronous\")}}}async emitToolEffectSettled(event){for(let ext of this.extensions){let handlers=ext.handlers.get(\"tool_effect_settled\");if(!handlers||handlers.length===0)continue;for(let handler of handlers){try{await handler(event,this.createContext(ext.path))}catch(err){let message=err instanceof Error?err.message:String(err),stack=err instanceof Error?err.stack:void 0;this.emitError({extensionPath:ext.path,event:\"tool_effect_settled\",error:message,stack})}}}}async emitToolCall(event){",
+          "expectedCount": 1,
+          "insertMarker": "async emitToolEffectSettled(event){",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        },
+        {
+          "anchor": "execute:async(toolCallId,params,signal,onUpdate)=>{let activeBefore=runner.getActiveTools(),invocation=createToolContext?.(signal),result3;try{result3=await registeredTool.definition.execute(toolCallId,params,signal,onUpdate,invocation?.context??runner.createContext())}finally{invocation?.dispose()}",
+          "replacement": "execute:async(toolCallId,params,signal,onUpdate)=>{let activeBefore=runner.getActiveTools(),invocation=createToolContext?.(signal),result3;try{runner.emitToolEffectBefore({type:\"tool_effect_before\",toolCallId,toolName:registeredTool.definition.name,input:params});let effectFailure;try{result3=await registeredTool.definition.execute(toolCallId,params,signal,onUpdate,invocation?.context??runner.createContext())}catch(err){effectFailure=err}await runner.emitToolEffectSettled({type:\"tool_effect_settled\",toolCallId,toolName:registeredTool.definition.name,input:params,ok:effectFailure===void 0,...(effectFailure===void 0?{isError:result3?.isError===!0}:{error:effectFailure instanceof Error?effectFailure.message:String(effectFailure)})});if(effectFailure!==void 0)throw effectFailure}finally{invocation?.dispose()}",
+          "expectedCount": 1,
+          "insertMarker": "runner.emitToolEffectBefore({",
+          "insertMarkerInInput": 0,
+          "insertMarkerInOutput": 1
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "All anchors are byte-exact against the pinned immutable base files; every expectedCount is asserted before any output write and a drift refuses with a nonzero exit.",
+    "Lifecycle emission point is the tool wrapper's execute (wrapper.js), which AgentSession uses for BOTH extension-registered and built-in tools; it is reached only after every tool_call blocker and scheduler/preflight skip.",
+    "tool_effect_before is synchronous and non-swallowed (a throw blocks definition.execute and yields zero settled); tool_effect_settled is emitted exactly once from the actual definition promise (not from tool_result and not from a synthetic abort). See EVENT-CONTRACT.md.",
+    "The bundled mirrors carry the identical contract; randomUUID aliases are the module-scope node:crypto bindings the bundles already use inside the agent-session module region (randomUUID11 in chunk-RRSND33J.js, randomUUID16 in session-worker.js).",
+    "The staged tree contains only these seven files plus manifest.json; it never duplicates the package and never touches pristine/, base/, the installed trees, or other lanes."
+  ]
+}

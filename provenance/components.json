@@ -2,8 +2,8 @@
   "schema": "piomo.components/1",
   "repository": "piomo-orchestration",
   "displayName": "PiOMO Orchestration Mod",
-  "description": "Third-party component record for the curated private repository. Every published file that contains third-party-derived material is listed here with its licence basis before its path is allowed in provenance/allowlist.json. Owner-authored files are UNLICENSED and are deliberately not listed; unknown-rights third-party code is excluded from the repository entirely.",
-  "rightsModel": "owner-authored files are UNLICENSED; the only exceptions are the third-party-derived lines recorded below, each carrying its own recorded licence; the distinction is per-line within the listed file",
+  "description": "Third-party component record for the curated private repository. The first commit contains only the four Senpi MIT regex lines below; the second commit additionally carries pinned Senpi MIT and OmO Sustainable Use License source context inside otherwise owner-authored refresh-04 transforms. The borrowed portions and their full notices are recorded below; unknown-rights third-party code is excluded.",
+  "rightsModel": "owner-authored portions are UNLICENSED; embedded upstream source anchors and literals retain their respective Senpi MIT or OmO Sustainable Use License terms, with full notices carried in licenses/",
   "components": [
     {
       "id": "senpi-prompt-preset-resolver-regexes",
@@ -39,9 +39,77 @@
         "publishedPath": "packages/local-omo-subagent-skill-correction/extensions/omo-subagent-skill-correction.mjs",
         "publishedLines": [23, 27, 29, 31],
         "content": "four verbatim regex literals derived from the upstream prompt-preset resolver: the kimi-k3 bounded matcher (line 23), deepseek v4 flash 0731 (line 27), deepseek v4 flash (line 29), deepseek v4 pro (line 31)",
-        "rightsDistinction": "only these four regex lines in the listed file are third-party-derived under MIT; the remainder of that file, and every other file in this repository, is owner-authored UNLICENSED; unknown-rights third-party code is excluded from publication"
+        "rightsDistinction": "only these four regex lines in this commit-1 file are third-party-derived under MIT; its remaining authored code is UNLICENSED. The separate refresh-04 exceptions are listed below."
+      }
+    },
+    {
+      "id": "senpi-engine-bridge-pinned-context",
+      "source": {
+        "package": "@code-yeongyu/senpi",
+        "version": "2026.9.23-5",
+        "upstreamGit": {
+          "repository": "https://github.com/code-yeongyu/senpi",
+          "tag": "v2026.9.23-5",
+          "commit": "97e48c480c3a7b65aaffbd69c1bfba4d57fb7be8"
+        },
+        "installedPreimages": "provenance/refresh-04.json.livePreimages.files (seven SHA-256 and size pairs)"
+      },
+      "license": {
+        "spdx": "MIT",
+        "notice": {
+          "publishedPath": "licenses/senpi-MIT.txt",
+          "sha256": "b572487f123bf259487f7dab25923af16fecd08ed7a2c50964f393282dba883c",
+          "bytes": 1143
+        }
+      },
+      "use": {
+        "publishedPath": "patches/refresh-04/engine-bridge/pins.json",
+        "content": "21 byte-exact input anchors (2310 anchor bytes total) from seven pinned installed Senpi engine files, including the 466-byte wrapper execute/context/dispose block; replacement strings also retain unmodified Senpi context around owner-authored changes, including two bundled mirrors.",
+        "rightsDistinction": "quoted original Senpi context remains MIT; the transform instructions and added event/identity logic are owner-authored UNLICENSED. The source file is mixed-origin rather than exclusively owner-authored."
+      }
+    },
+    {
+      "id": "omo-refresh04-anchored-context",
+      "source": {
+        "package": "@code-yeongyu/omo-senpi",
+        "versions": ["5.0.0-beta.84", "5.0.0-beta.88"],
+        "upstreamGit": {
+          "repository": "https://github.com/code-yeongyu/oh-my-openagent",
+          "tags": [
+            { "tag": "v5.0.0-beta.84", "commit": "33d9e8a46e2eed2eb0177d7fb66f99e26e17e510" },
+            { "tag": "v5.0.0-beta.88", "commit": "7336bdfe405c23185c294bd8af35a62ce9d254ae" }
+          ],
+          "bundle": "packages/omo-senpi/plugin/extensions/omo-task.js",
+          "stripQuotedSource": "packages/omo-senpi/src/components/skill-pointers/strip-quoted-regions.ts"
+        }
+      },
+      "license": {
+        "id": "LicenseRef-Sustainable-Use-1.0",
+        "notice": {
+          "publishedPath": "licenses/omo-SUL.txt",
+          "sha256": "b61ac928f152d13517328263e6bee9175b928f9ab696a2d2ca2b6cfd961ddc32",
+          "bytes": 3973,
+          "upstreamTag": "v5.0.0-beta.88",
+          "upstreamGitBlob": "5982a8720a1cb87c26a36bb31d5019f119841769"
+        },
+        "conditions": "personal/internal use; redistribution only free of charge for non-commercial purposes, with the full terms and a prominent modification notice"
+      },
+      "use": {
+        "publishedPaths": [
+          "patches/refresh-04/patches/deltas/slot-4-gateRepair.insert.js",
+          "patches/refresh-04/patches/deltas/todo-7-retry.insert.js",
+          "patches/refresh-04/patches/deltas/todo-8-quota.insert.js",
+          "patches/refresh-04/patches/deltas/todo-9-health.insert.js",
+          "patches/refresh-04/qa/gate-repair-anchor.mjs",
+          "patches/refresh-04/qa/retry-budget-anchor.mjs",
+          "patches/refresh-04/qa/quota-routing-anchor.mjs",
+          "patches/refresh-04/qa/bundle-health-anchor.mjs"
+        ],
+        "content": "byte-exact generated-bundle seam strings, tracker state/context, and copied strip-pattern literals used by the four anchored custom deltas and their QA anchors; original OmO context is distinguished from the owner's inserted policy code.",
+        "modificationNotice": "MODIFIED: the owner authored refresh-04 gate, retry, quota and health transforms against OmO beta.84/beta.88; these source files are custom derivatives, not unmodified upstream OmO code.",
+        "rightsDistinction": "original OmO context retains the Sustainable Use License; new delta/verification logic is owner-authored UNLICENSED. The listed files are mixed-origin, not wholly owner-authored."
       }
     }
   ],
-  "counts": { "components": 1 }
+  "counts": { "components": 3 }
 }

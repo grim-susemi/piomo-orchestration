@@ -1,0 +1,114 @@
+{
+  "schema": "piomo.refresh04-stage/1",
+  "label": "refresh-04 stage-2 source identity and applied-state record",
+  "status": "applied",
+  "statusNote": "the owner applied the sealed candidate in a quiescent maintenance terminal. The installer reported exit 0 and eight writes; a separate read-only check matched all eight installed postimages and eight saved preimages, and a fresh OMO help invocation loaded the Senpi plugin successfully. The 17 committed source/test/pin files remain source-only; this is not a standalone reproducible release.",
+  "observedAtUtc": "2026-09-24T12:03:55Z",
+  "hashesAreMetadataOnly": true,
+  "sourceNamespace": "patches/refresh-04",
+  "sourceFileCount": 17,
+  "countDefinition": "17 is the count of owner-authored source/test/pin files only. Docs and provenance metadata (docs/version-history-contract.md, provenance/refresh-04.json) are allowed outside the patches namespace and are never part of the 17. The install helper and its test/prose, EVENT-CONTRACT.md, the .orig fragment snapshot and generated bundles are excluded.",
+  "sealedInput": {
+    "location": "<workspace-root>/.omo/evidence/beta88-install/gate-policy-a-candidate/refresh-04/source-identities.json (recorded symbolically; no machine-local absolute path is stored)",
+    "sha256": "f0a5990dfeb71a03910b3f01c5875d40f2a66902cfdb33f578b831fa48908777",
+    "bytes": 3356,
+    "note": "sealed manifest identity/hash; the 17 rows below were re-hashed read-only against the actual worktree files and match byte-for-byte (sha256 and byte count)."
+  },
+  "sealedManifestExcluded": [
+    "install-policy-a/install-policy-a.mjs",
+    "install-policy-a/prep.test.mjs",
+    "install-policy-a/README.md",
+    "engine-bridge/EVENT-CONTRACT.md",
+    "engine-bridge/README.md",
+    "patches/deltas/slot-4-gateRepair.insert.js.orig"
+  ],
+  "sources": [
+    { "path": "patches/refresh-04/engine-bridge/build-transform.mjs", "sha256": "f5e6587f30a8f73e65d58324756d228a8a2e84243be98bb8dec7cda46be92b33", "bytes": 13712 },
+    { "path": "patches/refresh-04/engine-bridge/inputid-identity.test.mjs", "sha256": "053ecfbf3fc819668590bff418194019e43c42e0608db2f609965d0ac8f4ebb8", "bytes": 10028 },
+    { "path": "patches/refresh-04/engine-bridge/lib.mjs", "sha256": "3f048235375ba50fd345a1efeefb4b51ba6fbdc75413b2127e4a40762d6ea945", "bytes": 4731 },
+    { "path": "patches/refresh-04/engine-bridge/originaltext.test.mjs", "sha256": "507d6ae7475bc0c5d547513a0d40d8eb3e1b965b3646a44575d18cd4a06b6d30", "bytes": 9499 },
+    { "path": "patches/refresh-04/engine-bridge/pins.json", "sha256": "f7d52524b1e471c24962443f57fdd874749c47bec3591b28fe79fb2094bc57e2", "bytes": 22259 },
+    { "path": "patches/refresh-04/engine-bridge/rollback-guard.test.mjs", "sha256": "6437800a2f4f804f14125014a39bf5b6e33893ccf271b8a56a74c3b3a13b408b", "bytes": 6573 },
+    { "path": "patches/refresh-04/engine-bridge/tool-effect-lifecycle.test.mjs", "sha256": "4488d1bda8f58f660c330ad23de3ef3b23a30e75dd1c66754b00287cb6a96025", "bytes": 20198 },
+    { "path": "patches/refresh-04/patches/deltas/slot-4-gateRepair.insert.js", "sha256": "f65e1b4fc4f43b1f4294bf887c90c0cbab11e35803b5c59a7d10abafadb0c639", "bytes": 39793 },
+    { "path": "patches/refresh-04/patches/deltas/todo-7-retry.insert.js", "sha256": "2b9e23d7a6879788e18aef798cdacf8f09c29dd196d8527a9d0de59b58540dc8", "bytes": 37756 },
+    { "path": "patches/refresh-04/patches/deltas/todo-8-quota.insert.js", "sha256": "6794b01cd808ad12ef0697921d989a13c05423cbad70730c9721c14f416b5181", "bytes": 34991 },
+    { "path": "patches/refresh-04/patches/deltas/todo-9-health.insert.js", "sha256": "a204b11ee4f583cc7f0f10b8bd75b69d17c9b9a6b1904e552d31c5a4ee86be1a", "bytes": 30899 },
+    { "path": "patches/refresh-04/qa/bundle-health-anchor.mjs", "sha256": "636210e848612c5fa73b342558e815088c01b791487ef522cdaa6687f022afce", "bytes": 9892 },
+    { "path": "patches/refresh-04/qa/gate-repair-anchor.mjs", "sha256": "e6aaa80a9b4f7027a16cbebc37c6e7f227f0a0b0e972cc5c7e1090bbc0ee34ba", "bytes": 12623 },
+    { "path": "patches/refresh-04/qa/gate-request-fixture.test.mjs", "sha256": "c4e33dbb1cef0ea752996ac26186d73e4f7f0125a3c25ed3a37b973e72a78cd5", "bytes": 60893 },
+    { "path": "patches/refresh-04/qa/quota-routing-anchor.mjs", "sha256": "09ff965e8b31561209bf4b8f00f922d08e8fcd243067c5d5c5198063c11c1c82", "bytes": 8619 },
+    { "path": "patches/refresh-04/qa/rebuild-ledger.mjs", "sha256": "a7b1057ed686134eed1b1d4d813c1618abce910030d02124d24151ace9f3c270", "bytes": 26942 },
+    { "path": "patches/refresh-04/qa/retry-budget-anchor.mjs", "sha256": "bcef63ea702487030ab0d646e6b5d1a21e30abbd115321f677b030bee1bb6407", "bytes": 12235 }
+  ],
+  "stagedTarget": {
+    "file": "omo-ai plugin/extensions/omo-task.js",
+    "sha256": "b56c4a3f5bd6af054f0b4b9177d2fdd7286286c90ae3d5bc31b99f51f4c85636",
+    "bytes": 1026525,
+    "pristineBase": "77b6747d35aa92e8618e4fe011dac36eddbfd4fe6edfbb2ad39ceb0639f63562",
+    "chain": [
+      "a2176b1d2ff59dd57c402988b4082e866ad0e211211c65ae639c26e778bedfd1",
+      "2a3eb09c0f8306d8bfb6e5def0c64a74a1369f709f655e15de799519b861b9bd",
+      "5f58e45d871e46cceb6973af3ddff1e4df659530cf6b4b03d7d8ab64f5f68f5f",
+      "b56c4a3f5bd6af054f0b4b9177d2fdd7286286c90ae3d5bc31b99f51f4c85636"
+    ],
+    "note": "metadata-only; the staged/generated engine bytes are never published in this repository."
+  },
+  "stagedEngineOutputs": [
+    { "path": "dist/core/extensions/runner.js", "sha256": "d9f074a83c0cc39ea46bc78f0b593f193428851325f9ee59a174c7f51bae651e", "bytes": 70429 },
+    { "path": "dist/core/extensions/types.d.ts", "sha256": "0bc35c94126abf682c42f4ae2b8a6da7fc855e11c5bb19df19f3712bad19391e", "bytes": 98338 },
+    { "path": "dist/core/agent-session.js", "sha256": "9dbda0628f1cd54d4a37b5a6aa7ef5549ae95bd7fab520c8a5439f9c06f3db9a", "bytes": 388149 },
+    { "path": "dist/core/extensions/wrapper.js", "sha256": "b59630d6008cc15926d8a14fec1253fd9e3adff75accdfb715f5d01780beee0d", "bytes": 3021 },
+    { "path": "dist/core/extensions/runner.d.ts", "sha256": "79e218938762dc2b44f62c952df43d9d9c683e686c1f2c05343c62360cc8a7c2", "bytes": 14286 },
+    { "path": "dist/bundle/chunks/chunk-RRSND33J.js", "sha256": "31bba2da710d03315d5cf4326d8c3c01ea4f42eaf2d2c16b43c691d537021ac5", "bytes": 3643927 },
+    { "path": "dist/bundle/chunks/session-worker.js", "sha256": "89efa93666997c15fd47fd0879babcae45e63bbd9e4ab5f94df66ec8d7ca0119", "bytes": 14017693 }
+  ],
+  "engineManifestSha256": "f0bb93c9f1c10f488a00337fa322fcc96f294157a847d8bc2e82ae4677691eec",
+  "slot4FragmentSha256": "f65e1b4fc4f43b1f4294bf887c90c0cbab11e35803b5c59a7d10abafadb0c639",
+  "livePreimages": {
+    "count": 8,
+    "note": "historical pre-apply live state verified by the installer immediately before writing and preserved in the rollback backup; metadata-only, these bytes are never published.",
+    "installedOmoTail": { "file": "omo-ai plugin/extensions/omo-task.js", "sha256": "f1aa0994317cdaaa347a5b90bbbd030c42188e351b0e83ef8d99b6f807d10f78", "bytes": 1013199 },
+    "senpiPackage": "@code-yeongyu/senpi 2026.9.23-5",
+    "files": [
+      { "path": "dist/core/extensions/runner.js", "sha256": "a7bef394fba1922a1844722f2b35e6215dbd4ae8e01e179a1335d2563767d5af", "bytes": 68325 },
+      { "path": "dist/core/extensions/types.d.ts", "sha256": "fe5240513f159b8fe28a00a10df37b31b12894fcf956be56bdd820e7e62a8ef8", "bytes": 97033 },
+      { "path": "dist/core/agent-session.js", "sha256": "2e09991555bbea1446bee3f6e0d2bf334343ca0cf17a228c13625caa3b4b8ba9", "bytes": 388009 },
+      { "path": "dist/core/extensions/wrapper.js", "sha256": "2b982ac483b2318b022338d4741fd2aa38dbae2afb7918503008e430e7c7507f", "bytes": 2030 },
+      { "path": "dist/core/extensions/runner.d.ts", "sha256": "84a26abc200f8f5fdfb8383fc22444098aa0f2e43da1880c51c54dbdc75fc73f", "bytes": 14104 },
+      { "path": "dist/bundle/chunks/chunk-RRSND33J.js", "sha256": "cb247dce3c390a8cc87494b98c1acc7f7fa9218a7935d94c065e0a9ab32904ba", "bytes": 3642475 },
+      { "path": "dist/bundle/chunks/session-worker.js", "sha256": "4fc3b9dc1baa8245f05e193d7b9e989a2b20dd983c0989cfccf0de44b0cbb880", "bytes": 14016241 }
+    ]
+  },
+  "commitBaseline": {
+    "commit1GitOid": "ab208f042a617889056b681a33d2d5d858f0952e",
+    "note": "commit 1 (installed-current) is the pre-refresh installed baseline (installed-state pre-refresh snapshot, commit 1); the SOURCE_GAP for the receipt-era slot-4 authored inputs is not healed and this manifest does not heal it."
+  },
+  "ledgerSeparation": "provenance/source-adaptations.json is the commit-1-only publication-adaptation ledger and must remain unchanged even as README/contract hashes change in this worktree; this stage-2 identity manifest is a separate commit-2 record and does not modify, extend or depend on that ledger.",
+  "liveApplyGate": [
+    "install is run by the owner in a quiescent maintenance terminal and must exit 0",
+    "a pre-apply backup of every replaced live file is taken and recorded",
+    "postimage hashes of every applied target are re-verified after the install",
+    "a fresh host check confirms the applied chain before the second commit is created"
+  ],
+  "liveApplication": {
+    "ownerReceipt": {
+      "schema": "omo-beta88/policy-a-install/v2",
+      "generatedAtUtc": "2026-09-24T17:44:57.549Z",
+      "manifestSha256": "0b870c530f014e798cb4c133110c5ddc9aa634faa66b4ad00be91e1ef8bd8f13",
+      "action": "applied",
+      "exit": 0,
+      "installedWrites": 8,
+      "fileCount": 8,
+      "runtime": "Windows x64 Node v24.19.0 / libuv 1.52.1"
+    },
+    "backupLocation": "<workspace-root>/.omo/evidence/beta88-install/gate-policy-a-install-prep/refresh-04/backups/tx-mhZmkS",
+    "independentReadOnlyCheck": {
+      "installedPostimagesMatched": 8,
+      "savedPreimagesMatched": 8,
+      "javascriptSyntaxChecksPassed": 6,
+      "freshHostCheck": "OMO_RUNTIME=node omo --help: exit 0, Usage/Commands/Options and omo-senpi options present"
+    }
+  },
+  "rights": "owner-authored refresh-04 delta and test logic is UNLICENSED; pins.json includes MIT-licensed original Senpi anchors and the OmO delta/QA anchors include Sustainable Use License original context. Their exact paths, attribution and full notices are recorded in provenance/components.json, licenses/senpi-MIT.txt and licenses/omo-SUL.txt. The 17 files are not claimed wholly owner-authored; no unknown-rights third-party code, raw settings, credentials or trusted material is included."
+}
