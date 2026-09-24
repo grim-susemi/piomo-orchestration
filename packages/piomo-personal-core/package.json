@@ -1,0 +1,21 @@
+{
+  "name": "piomo-personal-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "files": [
+    "extensions/omo-model-tuning.ts",
+    "extensions/omo-orchestrator-guard.ts",
+    "extensions/omo-compaction-summarizer.ts",
+    "README.md",
+    "compatibility.json"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/omo-model-tuning.ts",
+      "./extensions/omo-orchestrator-guard.ts",
+      "./extensions/omo-compaction-summarizer.ts"
+    ]
+  }
+}

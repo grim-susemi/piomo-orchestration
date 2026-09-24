@@ -1,0 +1,65 @@
+{
+  "schema": "piomo.installed-state/1",
+  "label": "installed-state provenance snapshot, partial source coverage, NOT reproducible release",
+  "commit": "installed-current (commit 1)",
+  "refresh04SourceInCommit": "none - this first slice contains no refresh-04 authored source",
+  "observedAtUtc": "2026-09-24T10:45:50Z",
+  "hashesAreMetadataOnly": true,
+  "hashSourceNote": "all recorded hashes observed or re-hashed read-only; observedAtUtc is the full UTC timestamp of the latest re-hash, recorded so concurrent settings drift stays attributable; referenced bytes are never published",
+  "installedOmoTail": {
+    "sha256": "f1aa0994317cdaaa347a5b90bbbd030c42188e351b0e83ef8d99b6f807d10f78",
+    "bytes": 1013199,
+    "note": "input-source hotfix chain tail; predecessor 3aec04b1..., pristine base 77b6747d..., intermediates and pins recorded in docs/version-history-contract.md"
+  },
+  "senpiInstalledPreimages": {
+    "package": "@code-yeongyu/senpi",
+    "version": "2026.9.23-5",
+    "files": [
+      { "path": "dist/core/extensions/runner.js", "sha256": "a7bef394fba1922a1844722f2b35e6215dbd4ae8e01e179a1335d2563767d5af", "bytes": 68325 },
+      { "path": "dist/core/extensions/types.d.ts", "sha256": "fe5240513f159b8fe28a00a10df37b31b12894fcf956be56bdd820e7e62a8ef8", "bytes": 97033 },
+      { "path": "dist/core/agent-session.js", "sha256": "2e09991555bbea1446bee3f6e0d2bf334343ca0cf17a228c13625caa3b4b8ba9", "bytes": 388009 },
+      { "path": "dist/core/extensions/wrapper.js", "sha256": "2b982ac483b2318b022338d4741fd2aa38dbae2afb7918503008e430e7c7507f", "bytes": 2030 },
+      { "path": "dist/core/extensions/runner.d.ts", "sha256": "84a26abc200f8f5fdfb8383fc22444098aa0f2e43da1880c51c54dbdc75fc73f", "bytes": 14104 },
+      { "path": "dist/bundle/chunks/chunk-RRSND33J.js", "sha256": "cb247dce3c390a8cc87494b98c1acc7f7fa9218a7935d94c065e0a9ab32904ba", "bytes": 3642475 },
+      { "path": "dist/bundle/chunks/session-worker.js", "sha256": "4fc3b9dc1baa8245f05e193d7b9e989a2b20dd983c0989cfccf0de44b0cbb880", "bytes": 14016241 }
+    ]
+  },
+  "looseTuningExtension": {
+    "status": "active",
+    "file": "omo-model-tuning.ts",
+    "sha256": "65ac2d42f61def07df6325f19850b6a9af0819dea40da8a0f45d67cafd58a175",
+    "companionTest": {
+      "file": "omo-model-tuning.test.js",
+      "sha256": "8901043a07a2d913fb2a1f76e5fd775bd79505dd3b2c79273a9161c2911b8623"
+    }
+  },
+  "liveAgentSettings": {
+    "distinctFromEngineConfig": true,
+    "bytes": 8311,
+    "sha256": "8d3fa7a6a33186483d5120883e81768be482db87552e56958dcd67c8db596e65",
+    "previouslyRecordedSha256": "a82b4322a12ab4652ee43a7eb1cf503e91a9eb7bd80fa37f8481d698655582e6",
+    "drift": "read-only re-hash on 2026-09-24 showed drift and re-verified unchanged at 2026-09-24T10:45:50Z; the current value is recorded instead and the live file itself is never published"
+  },
+  "liveEngineConfig": {
+    "file": "omo.jsonc",
+    "bytes": 129175,
+    "sha256": "c35a9a6bfacbe54f657806f94cea3307b4452d4ddf2ac605fb6867ef502769a4",
+    "unchangedFromPreviousRecord": true
+  },
+  "sourceGaps": [
+    { "role": "anchor", "authoredInput": "qa/gate-repair-anchor.mjs", "sha256": "ae5284618c065acf48e7872260ee35d1cb2c6af8dfc45d5700fc1a39ce5878de", "verdict": "SOURCE_GAP" },
+    { "role": "fixture", "authoredInput": "qa/gate-request-fixture.test.mjs", "sha256": "25ee327e6a1bc5fd695792754221860cfad1007589c4c811a49fa1871fe3f958", "verdict": "SOURCE_GAP" },
+    { "role": "fragment", "authoredInput": "patches/deltas/slot-4-gateRepair.insert.js", "sha256": "9b6d4ba593266f22b8977decfd9db3922fd1abb51458f7b86c88caf034b99a3a", "verdict": "SOURCE_GAP" }
+  ],
+  "sourceGapNote": "receipt-era installed slot-4 authored inputs are unrecoverable; no partial three-slot snapshot and no generated-tail substitution (verdict per omo-piomo-modpack-curated/task-1-source-verdict/v1, exactMatches 0/3)",
+  "packageStatuses": [
+    { "package": "piomo-personal-skills", "pin": "../packages/piomo-personal-skills", "status": "configured", "configuredInLiveSettings": true, "note": "includes the executable omo-check skill and its command dependency scripts/pr-watch.mjs; pin and file presence proven" },
+    { "package": "local-intent-clarifier-hook", "pin": "../packages/local-intent-clarifier-hook", "status": "configured", "configuredInLiveSettings": true },
+    { "package": "local-omo-subagent-skill-correction", "pin": "../packages/local-omo-subagent-skill-correction", "status": "configured", "configuredInLiveSettings": true },
+    { "package": "piomo-judgment-workflow", "pin": "../packages/piomo-judgment-workflow", "status": "library-only", "configuredInLiveSettings": true },
+    { "package": "piomo-personal-core", "pin": "../packages/piomo-personal-core", "status": "stale", "configuredInLiveSettings": true, "note": "kept stale: two absent guard/compaction entries plus a missing packaged tuning entry; included only as a documented stale manifest and excluded from the verified activation example" }
+  ],
+  "runtimeProofNote": "status labels follow the docs/version-history-contract.md glossary; the task-3 receipt deferred dynamic activation verification to a later task, so packages without a current runtime loader/behavioral receipt are recorded as configured rather than active; no fresh runtime probe was performed for this snapshot, so no additional runtime proof is claimed here",
+  "prWatchDocumentation": "the omo-check command depends on scripts/pr-watch.mjs, which on the installed machine writes machine-local snapshot output under workspace .omo evidence paths; those as-installed machine-local paths are documented here in structural terms only and are deliberately NOT refactored in this snapshot; they are not clone prerequisites and no absolute machine-local path is recorded in this file",
+  "examplesNote": "examples/settings.json is a sanitized inventory example, not a verified ready-to-run configuration; no clone activation is claimed"
+}

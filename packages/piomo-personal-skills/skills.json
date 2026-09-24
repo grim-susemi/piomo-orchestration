@@ -1,0 +1,168 @@
+{
+  "schema": "piomo-personal-skills/v1",
+  "package": "piomo-personal-skills",
+  "version": "0.1.0",
+  "publication": {
+    "class": "publication-adapted-snapshot",
+    "summary": "Canonical machine-local source bytes are recorded in originalRevision (raw SHA-256, byte count, loader-convention body digest). publishedRevision records the shipped bytes with an explicit parity class and diff summary; no byte-parity beyond the recorded class is claimed.",
+    "sanitization": "No machine-local absolute path (user home, .omo home, workspace root, or user desktop) appears in any published file; source locations are recorded symbolically as <user-home>, <omo-home>, <user-desktop> and <workspace-root>.",
+    "normalizations": [
+      "intent-clarifier: CRLF -> LF line endings (87 line endings); no line content changed",
+      "omo-check: 3 lines changed - the fixed-path header names the clone root, the machine-local absolute pr-watch command path is replaced by the clone-root scripts/pr-watch.mjs command, and the machine-local desktop mirror-test path is cited as <user-desktop>/OpenCode_Modes/OMO_Native_ReasoningLevels.Tests.ps1 (unbundled; not runnable in the clone); all other lines byte-identical",
+      "reference-adaptation: all lines byte-identical; one final newline added because the canonical body had none"
+    ],
+    "rights": "Owner-authored workflow prose, UNLICENSED, private repository. The reference-adaptation body cites third-party registries and implementations by name only; no third-party code is copied, vendored or packaged."
+  },
+  "scopeManifest": {
+    "path": "E/T13-finish-scope.json",
+    "sha256": "a0f09679e694bc09e738c1af5e3cc6f757ee5de26033451f2a520e121d8f3365",
+    "eligibilityUnit": "I4-19 A/intent-clarifier + I4-21 A/omo-check + I4-23 A/reference-adaptation + I4-29 U/agent/skills/omo-check",
+    "disposition": "source-workspace ledger reference carried from the original manifest; cited-only, not packaged"
+  },
+  "bodyContract": "Native task loader convention: CRLF normalized to LF, frontmatter block stripped, trimmed. bodyDigest is the SHA-256 of that body and is recomputed from the shipped bytes; originalRevision.bodyDigest carries the same digest over the canonical original bytes.",
+  "skills": [
+    {
+      "id": "intent-clarifier",
+      "ledgerId": "I4-19",
+      "shipped": "skills/intent-clarifier/SKILL.md",
+      "canonicalSource": "<user-home>/.agents/skills/intent-clarifier/SKILL.md",
+      "canonicalSourceNote": "machine-local path recorded symbolically; the live file was read-only input and is never published",
+      "originalRevision": {
+        "revision": "782125d3687a40ebf2e2ceb6dcf32486b0e4a5f9a5e8fc0cbae5262b839d6ccc",
+        "bytes": 4038,
+        "bodyDigest": "974ad75464b5dafe902417207596b7710e5690be652225ee717f181ff6f07487",
+        "lineEndings": "CRLF",
+        "finalNewline": true
+      },
+      "publishedRevision": {
+        "revision": "f4736b8ca0ef86b07cab565110f4b6377993b0fe0d8dcc2822f424d9fc8b88f4",
+        "bytes": 3951,
+        "bodyDigest": "974ad75464b5dafe902417207596b7710e5690be652225ee717f181ff6f07487",
+        "parity": "content-identical; only CRLF -> LF line-ending normalization applied",
+        "diffSummary": "0 lines changed; 87 line endings normalized"
+      },
+      "frontmatter": {
+        "name": "intent-clarifier",
+        "description": "Clarify ambiguous user intent before acting. Use when the user's request is vague, underspecified, or open to multiple interpretations (missing scope, criteria, or constraints). Proposes a refined one-sentence request and asks for confirmation before execution. Skip when the request is already concrete."
+      },
+      "references": [
+        {
+          "ref": "<omo-home>/agent/extensions/intent-clarifier-hook.ts",
+          "relation": "paired prompt gate (I2-03, separate lane)",
+          "disposition": "cited-only, not packaged here"
+        },
+        {
+          "ref": "<omo-home>/AGENTS.md skill fallback line",
+          "relation": "fallback skill-composition principle",
+          "disposition": "cited-only, not packaged here"
+        }
+      ]
+    },
+    {
+      "id": "omo-check",
+      "ledgerId": "I4-21",
+      "shipped": "skills/omo-check/SKILL.md",
+      "canonicalSource": "<user-home>/.agents/skills/omo-check/SKILL.md",
+      "canonicalSourceNote": "machine-local path recorded symbolically; the live file was read-only input and is never published",
+      "originalRevision": {
+        "revision": "7f2c1707106039d4758b41f6776fe21446f4f4d096e0068d173ef157baa8a493",
+        "bytes": 6971,
+        "bodyDigest": "b1b6255ae583daec5bc721efb2c3dc94f5cca7444bd39616000a77db5ba376e9",
+        "lineEndings": "LF",
+        "finalNewline": true,
+        "observedAt": "2026-09-24 (GLM-5.3 max checklist added)"
+      },
+      "previousPackagedRevision": {
+        "revision": "4342cf5e97dc7620f0d9a11e74b3e4429c3f894b667b0edb6d4dba76771ea474",
+        "bytes": 4791,
+        "recordedAt": "earlier 2026-09-24 curation pass",
+        "status": "superseded previous packaged snapshot (pre-GLM-5.3 update); kept as a dated marker, not the current canonical"
+      },
+      "publishedRevision": {
+        "revision": "948842c60df1e3904cd2985733f2e89cac0344ec04caf7636ff99267fee75eed",
+        "bytes": 7025,
+        "bodyDigest": "fe16c7c4597ecb499fa858f7ea3674c2c5da0732167387babf7a2835a00f84e5",
+        "parity": "sanitized; all lines byte-identical except the three recorded lines; LF endings and final newline preserved",
+        "diffSummary": "3 lines changed: the fixed-path header names the clone root, the machine-local absolute pr-watch command path is replaced by the clone-root command, and the machine-local desktop mirror-test path is cited symbolically as <user-desktop>/... (unbundled; not runnable in the clone)"
+      },
+      "ledgerDrift": "oldest ledger record 6491a433962186994c9569697f8be55db95afcad3cc14a73d253d036702e9ee4/3824; previous packaged snapshot 4342cf5e97dc7620f0d9a11e74b3e4429c3f894b667b0edb6d4dba76771ea474/4791 (superseded, pre-GLM-5.3); current live canonical 7f2c1707106039d4758b41f6776fe21446f4f4d096e0068d173ef157baa8a493/6971 read through both live paths (the U path is a symlink to the A file). Shipped bytes derive from the current live canonical bytes with the recorded sanitization; see duplicates.json.",
+      "frontmatter": {
+        "name": "omo-check",
+        "description": "OMO 통합점검. 프체크, 올체크, PR 상태, 리빌드, 업그레이드 확인, 커스텀 패치, 내 PR 어떻게 됐어, 업데이트 패치 과정 같은 말에 발동. PR 6건 상태+개발자 멘트+리빌드 판정, 전역 omo 버전, 커스텀 보존, 업데이트 패치 과정을 한 번에 점검하고 바뀐 것만 보고."
+      },
+      "references": [
+        {
+          "ref": "scripts/pr-watch.mjs at the clone root",
+          "relation": "read-only sweep invoked by the shipped skill body; run from the clone root only; the curated repository carries it separately, not this package",
+          "disposition": "command dependency, cited-only, not packaged here"
+        }
+      ]
+    },
+    {
+      "id": "reference-adaptation",
+      "ledgerId": "I4-23",
+      "shipped": "skills/reference-adaptation/SKILL.md",
+      "canonicalSource": "<user-home>/.agents/skills/reference-adaptation/SKILL.md",
+      "canonicalSourceNote": "machine-local path recorded symbolically; the live file was read-only input and is never published",
+      "originalRevision": {
+        "revision": "e4774e68d5bb3d3bd5f0cb5d4b3ea700a3707d3d36fdb580d9ec28831d113d25",
+        "bytes": 13258,
+        "bodyDigest": "d62b9fddf0e88af96c57e3a6e259f8dc6bc719514fd84cb8240de7fa46320f39",
+        "lineEndings": "LF",
+        "finalNewline": false
+      },
+      "publishedRevision": {
+        "revision": "6f30d5a47aa4c9823c286b914a13c2035e887a30d805ff2808c34fbf33b06f1b",
+        "bytes": 13259,
+        "bodyDigest": "d62b9fddf0e88af96c57e3a6e259f8dc6bc719514fd84cb8240de7fa46320f39",
+        "parity": "all lines byte-identical; one final newline added at publication",
+        "diffSummary": "0 lines changed; final newline added because the canonical body had none"
+      },
+      "frontmatter": {
+        "name": "reference-adaptation",
+        "description": "외부 참조 구현을 해부하고 최소 슬라이스로 차용하는 워크플로. 포크(fork), 차용, 응용, adapt, 레퍼런스(reference-led), \"이런 거 비슷하게\" — reuse an existing implementation 이라는 트리거에서 시작된다. 전체 모듈을 복사하지 않고, 복사할 기능 슬라이스를 명시하고 계약을 먼저 읽은 뒤 해부 보고서를 작성하여 절단점에서 도메인 배선만 교체한다."
+      },
+      "references": [
+        {
+          "ref": "frontend skill, uiux-work-harness, registry/beui.dev sources named in the body",
+          "relation": "external/unverified adaptation inputs",
+          "disposition": "excluded per scope; local-reference-only, not packaged here"
+        },
+        {
+          "ref": "<user-home>/.agents/skills/reference-adaptation/tests/validate-reference-adaptation.test.mjs",
+          "relation": "skill-local dev harness",
+          "disposition": "dev-only, not packaged here"
+        }
+      ]
+    }
+  ],
+  "manifestProvenance": {
+    "originalsRoot": "source-workspace package snapshot (machine-local; not published)",
+    "files": [
+      {
+        "file": "package.json",
+        "sha256": "33fcaf82c522444815db7407e134818df9c694f0bd663950cbb52c745ca20d3f",
+        "bytes": 373,
+        "publication": "copied verbatim"
+      },
+      {
+        "file": "README.md",
+        "sha256": "ba7fc676744318112630232ab064fd5441663aadda9cb9ee04ca2f7ced1d36b7",
+        "bytes": 1263,
+        "publication": "rewritten for the publication-adapted parity record; no machine-local paths"
+      },
+      {
+        "file": "skills.json",
+        "sha256": "51de080e5c510a5f88581a87eab4419cc559c8ed42d74d995e66388db137d8ce",
+        "bytes": 4830,
+        "publication": "rewritten: originalRevision/publishedRevision split with sanitized references"
+      },
+      {
+        "file": "duplicates.json",
+        "sha256": "a07bb8d5ad326d8c87ee1a255d5f1b2589dc61ee5413b1ace97605c10af2feb2",
+        "bytes": 1963,
+        "publication": "rewritten: symbolic paths and explicit live-vs-published revision distinction"
+      }
+    ]
+  }
+}

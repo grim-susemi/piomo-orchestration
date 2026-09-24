@@ -1,0 +1,20 @@
+{
+  "name": "piomo-personal-skills",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "files": [
+    "skills/intent-clarifier/SKILL.md",
+    "skills/omo-check/SKILL.md",
+    "skills/reference-adaptation/SKILL.md",
+    "skills.json",
+    "duplicates.json",
+    "README.md"
+  ],
+  "pi": {
+    "skills": [
+      "./skills"
+    ]
+  }
+}

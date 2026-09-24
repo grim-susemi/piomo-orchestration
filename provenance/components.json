@@ -1,0 +1,47 @@
+{
+  "schema": "piomo.components/1",
+  "repository": "piomo-orchestration",
+  "displayName": "PiOMO Orchestration Mod",
+  "description": "Third-party component record for the curated private repository. Every published file that contains third-party-derived material is listed here with its licence basis before its path is allowed in provenance/allowlist.json. Owner-authored files are UNLICENSED and are deliberately not listed; unknown-rights third-party code is excluded from the repository entirely.",
+  "rightsModel": "owner-authored files are UNLICENSED; the only exceptions are the third-party-derived lines recorded below, each carrying its own recorded licence; the distinction is per-line within the listed file",
+  "components": [
+    {
+      "id": "senpi-prompt-preset-resolver-regexes",
+      "source": {
+        "package": "@code-yeongyu/senpi",
+        "version": "2026.9.23-5",
+        "installedBundle": {
+          "file": "presets.js",
+          "sha256": "85b59dac4b6af9890a9658fd9598833d34b0d3b4c6d4d3a82148867101695e1c",
+          "role": "installed preset bundle the four regex literals were verified against"
+        },
+        "upstreamGit": {
+          "repository": "https://github.com/code-yeongyu/senpi",
+          "tag": "v2026.9.23-5",
+          "commit": "97e48c480c3a7b65aaffbd69c1bfba4d57fb7be8",
+          "file": "packages/coding-agent/src/core/extensions/builtin/prompt-preset/presets.ts",
+          "sha256": "e86a0c0554a510cf0fe86db553dda4555badace1aff7158f929efa41ad8b40e4",
+          "bytes": 17747,
+          "upstreamLines": [123, 144, 154, 193]
+        }
+      },
+      "license": {
+        "spdx": "MIT",
+        "notice": {
+          "publishedPath": "licenses/senpi-MIT.txt",
+          "sha256": "b572487f123bf259487f7dab25923af16fecd08ed7a2c50964f393282dba883c",
+          "bytes": 1143,
+          "origin": "verbatim upstream LICENSE at tag v2026.9.23-5 (commit 97e48c480c3a7b65aaffbd69c1bfba4d57fb7be8), byte-identical to https://raw.githubusercontent.com/code-yeongyu/senpi/97e48c480c3a7b65aaffbd69c1bfba4d57fb7be8/LICENSE",
+          "copyright": "(c) 2025 Mario Zechner (upstream pi-mono) and (c) 2026 Yeongyu Kim and senpi contributors"
+        }
+      },
+      "use": {
+        "publishedPath": "packages/local-omo-subagent-skill-correction/extensions/omo-subagent-skill-correction.mjs",
+        "publishedLines": [23, 27, 29, 31],
+        "content": "four verbatim regex literals derived from the upstream prompt-preset resolver: the kimi-k3 bounded matcher (line 23), deepseek v4 flash 0731 (line 27), deepseek v4 flash (line 29), deepseek v4 pro (line 31)",
+        "rightsDistinction": "only these four regex lines in the listed file are third-party-derived under MIT; the remainder of that file, and every other file in this repository, is owner-authored UNLICENSED; unknown-rights third-party code is excluded from publication"
+      }
+    }
+  ],
+  "counts": { "components": 1 }
+}

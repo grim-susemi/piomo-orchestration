@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "omo": "5.0.0-0.beta.51",
+  "senpi": "2026.9.9-2",
+  "families": ["deepseek-v4", "kimi-k3"],
+  "presets": ["deepseek-v4-flash", "deepseek-v4-flash-0731", "deepseek-v4-pro", "kimi-k3"],
+  "phaseStatus": "t13-correction-only",
+  "requiresHostFeatures": []
+}

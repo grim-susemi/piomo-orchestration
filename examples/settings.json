@@ -1,0 +1,12 @@
+{
+  "description": "sanitized inventory example, not a verified ready-to-run configuration; records the five historical package pins as clone-relative paths only, no clone activation claimed, no account/home/token/machine-local absolute paths",
+  "packages-setting": {
+    "packages": [
+      { "name": "piomo-personal-core", "path": "../packages/piomo-personal-core" },
+      { "name": "piomo-judgment-workflow", "path": "../packages/piomo-judgment-workflow" },
+      { "name": "piomo-personal-skills", "path": "../packages/piomo-personal-skills" },
+      { "name": "local-intent-clarifier-hook", "path": "../packages/local-intent-clarifier-hook" },
+      { "name": "local-omo-subagent-skill-correction", "path": "../packages/local-omo-subagent-skill-correction" }
+    ]
+  }
+}

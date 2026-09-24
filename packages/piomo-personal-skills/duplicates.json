@@ -1,0 +1,34 @@
+{
+  "schema": "piomo-skill-duplicates/v1",
+  "package": "piomo-personal-skills",
+  "publicationNote": "Machine-local paths are recorded symbolically (<user-home>, <omo-home>); the recorded revision is the canonical original raw SHA-256 of the current live file, and the duplicate U path is a symlink to the canonical A file (the same live file, not two independent copies). The single shipped body is publication-sanitized, so its publishedRevision in skills.json differs from these live-byte revisions; the canonical/loser relationship itself is unchanged.",
+  "rule": "Duplicate skill IDs are never merged and never overwritten. The canonical source follows inventory precedence (A user-install row is primary; the U copy is recorded as the duplicate). When both copies are byte-equal the canonical body ships once and the duplicate stays nonactivated. Differing content would ship as preserved variants with nonactivation, never as an invented merged body.",
+  "precedenceBasis": "Plan inventory contract: A/omo-check row I4-21 is the primary personal-ops skill; U/agent/skills/omo-check row I4-29 is its duplicate (Duplicate ID risk. Guard against split edits). Native loader behavior on same-name collisions is first-wins with an explicit collision diagnostic; the loser is recorded, not merged.",
+  "duplicates": [
+    {
+      "id": "omo-check",
+      "canonical": {
+        "ledgerId": "I4-21",
+        "row": "A / user-install skills",
+        "path": "<user-home>/.agents/skills/omo-check/SKILL.md",
+        "revision": "7f2c1707106039d4758b41f6776fe21446f4f4d096e0068d173ef157baa8a493",
+        "bytes": 6971,
+        "ledgerRevision": "6491a433962186994c9569697f8be55db95afcad3cc14a73d253d036702e9ee4",
+        "ledgerBytes": 3824,
+        "disposition": "canonical body shipped once as skills/omo-check/SKILL.md; the shipped bytes are publication-sanitized, so they are not byte-equal to these live bytes (publishedRevision in skills.json)"
+      },
+      "duplicate": {
+        "ledgerId": "I4-29",
+        "row": "U / agent skills",
+        "path": "<omo-home>/agent/skills/omo-check/SKILL.md",
+        "revision": "7f2c1707106039d4758b41f6776fe21446f4f4d096e0068d173ef157baa8a493",
+        "bytes": 6971,
+        "ledgerRevision": "6491a433962186994c9569697f8be55db95afcad3cc14a73d253d036702e9ee4",
+        "ledgerBytes": 3824,
+        "disposition": "nonactivated; the U path is a symlink to the canonical A file (same live file, never edited, never shipped as a second copy)"
+      },
+      "equality": "same live file through both paths: the U path is a symlink to the canonical A file, so both paths resolve to identical bytes (raw SHA-256 7f2c1707106039d4758b41f6776fe21446f4f4d096e0068d173ef157baa8a493/6971 at observation 2026-09-24); this supersedes the earlier independent-copy observation (4342cf5e97dc7620f0d9a11e74b3e4429c3f894b667b0edb6d4dba76771ea474/4791, byte-equal at the time); single activation, no variant needed",
+      "selection": "canonical A source ships; duplicate U copy is the recorded loser on collision"
+    }
+  ]
+}

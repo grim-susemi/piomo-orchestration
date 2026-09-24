@@ -1,0 +1,217 @@
+{
+  "schema": "piomo.source-adaptations/1",
+  "label": "publication-adapted source ledger (commit 1, installed-current)",
+  "scope": "commit 1 (installed-current) only; the refresh-04-staged commit carries sealed owner-authored sources and is out of scope for this ledger",
+  "statusNote": "partial source coverage, NOT reproducible release; SOURCE_GAP for the receipt-era slot-4 authored inputs is unchanged; refresh-04 staged sources are staged-future-only and not installed",
+  "locationConvention": "original locations are recorded symbolically only: <workspace-root> is the source workspace root holding the original package snapshot and the installed scripts; <user-home> is the user's home directory; <omo-home> is the OMO home directory; <user-desktop> is the user's desktop directory (machine-local, cited only, never published). No machine-local absolute path is recorded anywhere in this file.",
+  "methodNote": "every original/published pair below was compared by read-only byte diff and re-hashed read-only; diffClass values describe exactly what changed and nothing more; path/output adaptations are intentional bounded behavior changes and are NOT claimed byte- or behavior-identical to the as-installed source",
+  "adaptedFiles": [
+    {
+      "publishedPath": "packages/local-omo-subagent-skill-correction/extensions/omo-subagent-skill-correction.mjs",
+      "original": {
+        "location": "<workspace-root>/.omo/ulw/build/repo/packages/local-omo-subagent-skill-correction/extensions/omo-subagent-skill-correction.mjs",
+        "sha256": "0a75652fa3ca1e572a55c19d5fa46e6f899fd4dd5335d375ac052ef70971c770",
+        "bytes": 10157
+      },
+      "published": {
+        "sha256": "1c04c884ffeb26622513ea4688885d76da2485e17dc6369ca431bd082a6e1b2a",
+        "bytes": 9951
+      },
+      "diffClass": "line-ending-normalized (CRLF -> LF)",
+      "reason": "publication normalization only: all 206 lines carried CRLF line endings in the original snapshot and LF in the published file; byte delta equals the 206 CR characters removed; content verified identical after CR strip by read-only diff; no content or code change",
+      "semantic": false
+    },
+    {
+      "publishedPath": "packages/local-omo-subagent-skill-correction/extensions/omo-subagent-skill-correction.ts",
+      "original": {
+        "location": "<workspace-root>/.omo/ulw/build/repo/packages/local-omo-subagent-skill-correction/extensions/omo-subagent-skill-correction.ts",
+        "sha256": "28e1a26beb18e35d960cb77ed748c481f02288e893e84103fa37fb801b277c45",
+        "bytes": 3716
+      },
+      "published": {
+        "sha256": "84f51d1d011172fdfcc4b78778a0a1316e61c75a88bb044086350074672e44a0",
+        "bytes": 3627
+      },
+      "diffClass": "line-ending-normalized (CRLF -> LF)",
+      "reason": "publication normalization only: all 89 lines carried CRLF line endings in the original snapshot and LF in the published file; byte delta equals the 89 CR characters removed; content verified identical after CR strip by read-only diff; no content or code change",
+      "semantic": false
+    },
+    {
+      "publishedPath": "packages/piomo-personal-skills/duplicates.json",
+      "original": {
+        "location": "<workspace-root>/.omo/ulw/build/repo/packages/piomo-personal-skills/duplicates.json",
+        "sha256": "a07bb8d5ad326d8c87ee1a255d5f1b2589dc61ee5413b1ace97605c10af2feb2",
+        "bytes": 1963
+      },
+      "published": {
+        "sha256": "bafd0c83ed06c2d4ac9cdb5a4654a0d81c2cbfd4da5fc39db21ee6926c70a0ed",
+        "bytes": 3061
+      },
+      "diffClass": "path-sanitized + publication-annotation-fields-added",
+      "reason": "machine-local absolute paths replaced by symbolic locations (<user-home>/.agents/skills/omo-check/SKILL.md, <omo-home>/agent/skills/omo-check/SKILL.md) with new row labels (A / user-install skills, U / agent skills); added top-level package and publicationNote fields; the 2026-09-24 update records the current live revision (7f2c1707106039d4758b41f6776fe21446f4f4d096e0068d173ef157baa8a493/6971) on both paths and states that the U path is a symlink to the canonical A file (the same live file, not two independent copies), superseding the earlier independent-copy observation; disposition/equality wording no longer claims the shipped bytes are byte-equal to the live bytes (see publishedRevision in skills.json); the canonical/loser duplicate relationship itself is unchanged",
+      "semantic": true
+    },
+    {
+      "publishedPath": "packages/piomo-personal-skills/README.md",
+      "original": {
+        "location": "<workspace-root>/.omo/ulw/build/repo/packages/piomo-personal-skills/README.md",
+        "sha256": "ba7fc676744318112630232ab064fd5441663aadda9cb9ee04ca2f7ced1d36b7",
+        "bytes": 1263
+      },
+      "published": {
+        "sha256": "4d8d1e167b0dcf338f00d11e01b86fbf8f102cc87f7a8ff10f421c865242bff6",
+        "bytes": 4527
+      },
+      "diffClass": "rewritten-for-publication (prose)",
+      "reason": "the exact-byte-copy claims were replaced by a publication-adapted snapshot framing with a per-skill parity-class table (intent-clarifier CRLF->LF, omo-check three-line path sanitization, reference-adaptation final-newline add); added a section documenting the omo-check command as node scripts/pr-watch.mjs --upgrade run from the clone root, with the clone-root script as a documented dependency not shipped by this package; the 2026-09-24 update records the GLM-5.3 max checklist addition as reflected and the referenced desktop mirror test as unbundled and not runnable in the clone; references description updated to the originalRevision/publishedRevision structure; no machine-local absolute path published; no runtime activation, installation or live-byte parity claimed",
+      "semantic": true
+    },
+    {
+      "publishedPath": "packages/piomo-personal-skills/skills.json",
+      "original": {
+        "location": "<workspace-root>/.omo/ulw/build/repo/packages/piomo-personal-skills/skills.json",
+        "sha256": "51de080e5c510a5f88581a87eab4419cc559c8ed42d74d995e66388db137d8ce",
+        "bytes": 4830
+      },
+      "published": {
+        "sha256": "5f8cc9aad76f78881f5e69fe324b4717d71539c379cf325effaa6908a0ad8bcc",
+        "bytes": 10408
+      },
+      "diffClass": "path-sanitized + schema-extension (originalRevision/publishedRevision split)",
+      "reason": "canonicalSource values symbolized to <user-home>/.agents/skills/<id>/SKILL.md and the pr-watch reference symbolized to the clone-root scripts/pr-watch.mjs; added a top-level publication block (class, summary, sanitization with the <user-desktop> placeholder, normalizations, rights); per-skill revision/bytes/bodyDigest moved into originalRevision (canonical original bytes) and paired with publishedRevision carrying the shipped sha256/bytes/bodyDigest with explicit parity class and diff summary; the 2026-09-24 update moved the omo-check originalRevision to the current live GLM-5.3 revision (7f2c1707106039d4758b41f6776fe21446f4f4d096e0068d173ef157baa8a493/6971, bodyDigest b1b6255ae583daec5bc721efb2c3dc94f5cca7444bd39616000a77db5ba376e9) with the previous packaged 4342cf5e97dc7620f0d9a11e74b3e4429c3f894b667b0edb6d4dba76771ea474/4791 kept as a previousPackagedRevision marker, and recomputed the omo-check publishedRevision from the updated shipped bytes; scopeManifest gained a cited-only disposition; bodyContract wording updated so the shipped body digest is recomputed from the shipped bytes",
+      "semantic": true
+    },
+    {
+      "publishedPath": "packages/piomo-personal-skills/skills/intent-clarifier/SKILL.md",
+      "original": {
+        "location": "<workspace-root>/.omo/ulw/build/repo/packages/piomo-personal-skills/skills/intent-clarifier/SKILL.md (identical copy verified at packaging time at <user-home>/.agents/skills/intent-clarifier/SKILL.md)",
+        "sha256": "782125d3687a40ebf2e2ceb6dcf32486b0e4a5f9a5e8fc0cbae5262b839d6ccc",
+        "bytes": 4038
+      },
+      "published": {
+        "sha256": "f4736b8ca0ef86b07cab565110f4b6377993b0fe0d8dcc2822f424d9fc8b88f4",
+        "bytes": 3951
+      },
+      "diffClass": "line-ending-normalized (CRLF -> LF)",
+      "reason": "publication normalization only: all 87 lines carried CRLF line endings in the original and LF in the published file; byte delta equals the 87 CR characters removed; content verified identical after CR strip by read-only diff; no content change",
+      "semantic": false
+    },
+    {
+      "publishedPath": "packages/piomo-personal-skills/skills/omo-check/SKILL.md",
+      "original": {
+        "location": "<user-home>/.agents/skills/omo-check/SKILL.md (current live canonical; the U path <omo-home>/agent/skills/omo-check/SKILL.md is a symlink to this same file)",
+        "sha256": "7f2c1707106039d4758b41f6776fe21446f4f4d096e0068d173ef157baa8a493",
+        "bytes": 6971
+      },
+      "supersededPackagedOriginal": {
+        "location": "<workspace-root>/.omo/ulw/build/repo/packages/piomo-personal-skills/skills/omo-check/SKILL.md",
+        "sha256": "4342cf5e97dc7620f0d9a11e74b3e4429c3f894b667b0edb6d4dba76771ea474",
+        "bytes": 4791,
+        "note": "previous packaged baseline (pre-2026-09-24 GLM-5.3 update); superseded by the current live original above and kept as a dated marker, not the current canonical"
+      },
+      "published": {
+        "sha256": "948842c60df1e3904cd2985733f2e89cac0344ec04caf7636ff99267fee75eed",
+        "bytes": 7025
+      },
+      "diffClass": "path-sanitized (bounded behavior: fixed command path + desktop test path citation; GLM-5.3 additions carried)",
+      "reason": "exactly three lines changed against the current live original: (1) the step-1 header line (project fixed path -> clone-root fixed path); (2) the fixed command line, where the machine-local absolute pr-watch invocation was replaced by node scripts/pr-watch.mjs --upgrade run from the clone root; (3) the GLM-5.3 mirror-consistency line, where the machine-local desktop powershell test path was replaced by the symbolic <user-desktop>/OpenCode_Modes/OMO_Native_ReasoningLevels.Tests.ps1 citation (that script is unbundled and not runnable in the clone); all other lines byte-identical, including the full GLM-5.3 max checklist addition; LF endings and final newline preserved; intentional bounded behavior change (path citations), NOT claimed byte- or behavior-identical to the as-installed skill",
+      "semantic": true
+    },
+    {
+      "publishedPath": "packages/piomo-personal-skills/skills/reference-adaptation/SKILL.md",
+      "original": {
+        "location": "<workspace-root>/.omo/ulw/build/repo/packages/piomo-personal-skills/skills/reference-adaptation/SKILL.md (identical copy verified at packaging time at <user-home>/.agents/skills/reference-adaptation/SKILL.md)",
+        "sha256": "e4774e68d5bb3d3bd5f0cb5d4b3ea700a3707d3d36fdb580d9ec28831d113d25",
+        "bytes": 13258
+      },
+      "published": {
+        "sha256": "6f30d5a47aa4c9823c286b914a13c2035e887a30d805ff2808c34fbf33b06f1b",
+        "bytes": 13259
+      },
+      "diffClass": "final-newline-normalized",
+      "reason": "publication normalization only: all 125 lines byte-identical; one final LF added because the canonical original body ended without a final newline (byte delta exactly 1); no content change",
+      "semantic": false
+    },
+    {
+      "publishedPath": "scripts/pr-watch.mjs",
+      "original": {
+        "location": "<workspace-root>/.omo/scripts/pr-watch.mjs (installed command dependency of the omo-check skill)",
+        "sha256": "873db7565bec4f4e3cefe20f45609ab10aee20afcb45da397c50545fffd6e4bd",
+        "bytes": 14300
+      },
+      "published": {
+        "sha256": "a0e54106076801cf01cb097c63ac4a03a7de72b236d6acbf25de699bbeb271ef",
+        "bytes": 14680
+      },
+      "diffClass": "path-sanitized (runtime-resolved paths; bounded behavior adaptation)",
+      "reason": "all changes are path/usage-comment adaptations with no logic changes, enumerated exactly as follows: (1) header comment usage path .omo/scripts/pr-watch.mjs -> scripts/pr-watch.mjs plus a clone-local snapshot-output note; (2) imports extended (homedir from node:os, dirname/resolve, fileURLToPath); (3) ROOT, previously a hardcoded machine-local workspace absolute path, now resolves to the clone root via import.meta.url so EVDIR/UPEV evidence output becomes clone-local .omo/evidence/pr-watch; (4) OMO constant omo.cmd and (5) the global omo-ai dir, previously hardcoded home-anchored absolute paths, now join(HOME, ...) at runtime; (6) the three sha12 watch paths (omo.jsonc, agent/models.json, agent/extensions/omo-model-tuning.ts) and the two semanticJsoncHash omo.jsonc calls, previously hardcoded absolute paths, now join(HOME, ...); (7) the omo.cmd readFileSync call now uses the OMO constant; intentional bounded behavior changes (path resolution/output location), NOT claimed byte- or behavior-identical to the as-installed script; verified with scripts/pr-watch.prune.test.mjs (3/3 pass) against the published bytes",
+      "semantic": true
+    }
+  ],
+  "copiedUnmodified": [
+    {
+      "publishedPath": "extensions/omo-model-tuning.ts",
+      "original": { "location": "<omo-home>/agent/extensions/omo-model-tuning.ts (installed loose tuning extension)", "sha256": "65ac2d42f61def07df6325f19850b6a9af0819dea40da8a0f45d67cafd58a175", "bytes": 18772 },
+      "note": "byte-identical to the as-installed bytes; matches the looseTuningExtension sha256 in provenance/installed-state.json"
+    },
+    {
+      "publishedPath": "extensions/omo-model-tuning.test.js",
+      "original": { "location": "<omo-home>/agent/extensions/omo-model-tuning.test.js (installed companion test)", "sha256": "8901043a07a2d913fb2a1f76e5fd775bd79505dd3b2c79273a9161c2911b8623", "bytes": 23185 },
+      "note": "byte-identical to the as-installed bytes; matches the looseTuningExtension.companionTest sha256 in provenance/installed-state.json"
+    },
+    {
+      "publishedPath": "scripts/pr-watch.prune.test.mjs",
+      "original": { "location": "<workspace-root>/.omo/scripts/pr-watch.prune.test.mjs", "sha256": "c059145adb71ba4d65486c4f9053757f95769a6bd2d983ce93a3ef2d0f1b767f", "bytes": 2153 },
+      "note": "byte-identical copy"
+    },
+    {
+      "publishedPath": "packages/README.md",
+      "original": { "location": "<workspace-root>/.omo/ulw/build/repo/packages/README.md", "sha256": "2ed3d101fa90c8c5277bc9c09577cd4c3976eaf5c6015a287907b9a319855ee4", "bytes": 318 },
+      "note": "byte-identical copy"
+    },
+    { "publishedPath": "packages/local-intent-clarifier-hook/extensions/intent-clarifier-hook.ts", "sha256": "4d706b7e41ea6bd5833f5fc0e6d1b0b8cb7f1e46863fda43e3756c22eb4dd478", "bytes": 12144 },
+    { "publishedPath": "packages/local-intent-clarifier-hook/extensions/lib/custom-mode-policy.ts", "sha256": "a8f751cfb5de31fdde34b77f6f7b8f009a467aab9abe2362ec62ee7b95b72bb9", "bytes": 36054 },
+    { "publishedPath": "packages/local-intent-clarifier-hook/package.json", "sha256": "42f9e574482077305d15a9f99e1c71e57a88286e4457d82157102169914ca71e", "bytes": 340 },
+    { "publishedPath": "packages/local-intent-clarifier-hook/README.md", "sha256": "73084bfcc1d734af31f15c2923a4c6344c975d43a78cfec18904b49e6ca57f17", "bytes": 2028 },
+    { "publishedPath": "packages/local-omo-subagent-skill-correction/compatibility.json", "sha256": "76c44f763e83b5bdd39a3744d543f964172259ccd5b7124c9399a7f1acd0ef50", "bytes": 282 },
+    { "publishedPath": "packages/local-omo-subagent-skill-correction/package.json", "sha256": "36e01d426b5284c15a2de61eea2bfd49d55d696f82fd6d6e58e3fcdc9e9df0ae", "bytes": 452 },
+    { "publishedPath": "packages/local-omo-subagent-skill-correction/README.md", "sha256": "0fa0da18163a217c6f34e63193e294ba97809eb31fabc60447ddc67026ceab06", "bytes": 1213 },
+    {
+      "publishedPath": "packages/local-omo-subagent-skill-correction/extensions/omo-subagent-skill-correction.d.mts",
+      "original": { "location": "<workspace-root>/.omo/ulw/build/repo/packages/local-omo-subagent-skill-correction/extensions/omo-subagent-skill-correction.d.mts", "sha256": "1af007f0741af8a98a09d7c42a20718e25ceac2d1d0478071afb675458b458f6", "bytes": 1351 },
+      "sha256": "1af007f0741af8a98a09d7c42a20718e25ceac2d1d0478071afb675458b458f6",
+      "bytes": 1351,
+      "note": "byte-identical copy"
+    },
+    { "publishedPath": "packages/piomo-judgment-workflow/extensions/judgment-contract.ts", "sha256": "d7323781f30f0d0ab85ea4369e7685fbc354dc28c340a070626349ab2772ff9a", "bytes": 4757 },
+    { "publishedPath": "packages/piomo-judgment-workflow/extensions/judgment-recipe.ts", "sha256": "d86cb87c8e640ccc5b116e874b2fadd762c990fa5d797a80968a1b0a74366f24", "bytes": 4044 },
+    { "publishedPath": "packages/piomo-judgment-workflow/extensions/judgment-routing.ts", "sha256": "649deb4b9f6c74a18a715998496a8f335e8e7dde7000de054d32e76bc219846e", "bytes": 13404 },
+    { "publishedPath": "packages/piomo-judgment-workflow/extensions/skill-workflow.ts", "sha256": "800f139692cdca13f762702ffd5dde69135fa2e8b6cfc729d8627935b8cc5c84", "bytes": 12625 },
+    { "publishedPath": "packages/piomo-judgment-workflow/extensions/workflow-composition.ts", "sha256": "effc17b2e2e30f0a96d619087c90702987ddcd404913d506b4b2922b5dd413e9", "bytes": 8725 },
+    { "publishedPath": "packages/piomo-judgment-workflow/package.json", "sha256": "4f0fc268cb0cf24ff0cb1897e28d84bc40271a7aa5e7a44323b47236d6da385c", "bytes": 689 },
+    { "publishedPath": "packages/piomo-judgment-workflow/README.md", "sha256": "80c1930dbba36c9f1a195b1633f58a3ea66760f1016ab0682a2e593ddc53dd9d", "bytes": 2591 },
+    { "publishedPath": "packages/piomo-personal-core/compatibility.json", "sha256": "d0154077460f8ae2c312841c8ea30b6a7e8f2c581aabd9d0c44743e9e4cb1439", "bytes": 303 },
+    { "publishedPath": "packages/piomo-personal-core/package.json", "sha256": "2cf3b52c01bd0c8ffbfcee3103c5e4c16ed9e2c68f6436bdda0e39996d7ec67a", "bytes": 494 },
+    { "publishedPath": "packages/piomo-personal-core/README.md", "sha256": "27c4091a29324a89534997f9ada162da0e7f02cfe848ace5ab3ef1d55ddae14a", "bytes": 2199 },
+    { "publishedPath": "packages/piomo-personal-skills/package.json", "sha256": "33fcaf82c522444815db7407e134818df9c694f0bd663950cbb52c745ca20d3f", "bytes": 373 }
+  ],
+  "copiedUnmodifiedNote": "entries without an original.location are package snapshot files verified byte-identical to <workspace-root>/.omo/ulw/build/repo/packages/<same-relative-path> by read-only hash comparison; every remaining curated package file was checked and none differed from its original beyond the nine adaptedFiles entries",
+  "curationOnly": [
+    { "path": "README.md", "sha256": "5c6b2436f52cb19584afa7d4d179edbc397cddd015f9e0238662e44e63706679", "bytes": 7241 },
+    { "path": "docs/version-history-contract.md", "sha256": "5efca636ac20e86767d82c03a9e39bf246fb001854f3e50f843d5c5150644ab8", "bytes": 16412 },
+    { "path": "examples/settings.json", "sha256": "03bc7457bc7634df1f7bdad68da733f276bfb65ccac7c51e7c48b9d6addad309", "bytes": 778 },
+    { "path": "provenance/allowlist.json", "sha256": "73bb0e376a4ebce01552a1d9a6d27e90ec7ac59048d954c1bc0ebdeb0b637b5a", "bytes": 4314 },
+    { "path": "provenance/components.json", "sha256": "258ccc28eb997922f6e305548c7b945e535c6ac2134098d2f71248ce677272ba", "bytes": 2941 },
+    { "path": "licenses/senpi-MIT.txt", "sha256": "b572487f123bf259487f7dab25923af16fecd08ed7a2c50964f393282dba883c", "bytes": 1143, "note": "verbatim upstream LICENSE of @code-yeongyu/senpi tag v2026.9.23-5 (commit 97e48c48...); not a curation-authored file, recorded here as a new file with no baseline original in this repository" },
+    { "path": "provenance/installed-state.json", "sha256": "d598de28ba8be165a002d387a9ff67add4bf5a691988e37e63a9d35c4bcaacd5", "bytes": 5921 },
+    { "path": "qa/audit-publish.mjs", "sha256": "29328230e88ac7fbd02f3a25897d46870549dc5771ceb6e4e23579a2e6e687bb", "bytes": 9992 },
+    { "path": "qa/audit-packages.mjs", "sha256": "f3a8f1650e23e49546c2e8b2603679aeb8f957f9c5c67b8d4c1a0efb0675abd6", "bytes": 12624 }
+  ],
+  "curationOnlyNote": "files authored during curation with no baseline original; no original sealed identity is claimed for them (publication hash and byte count only). licenses/senpi-MIT.txt is not curation-authored - it is the verbatim upstream senpi MIT notice recorded as a new file (see provenance/components.json) - but it has no baseline original inside this repository, so it is listed here with its upstream source stated in the note. provenance/source-adaptations.json itself is deliberately excluded from this list to avoid a self-hash cycle: recording its own sha256 here would make the recorded value self-referential.",
+  "counts": {
+    "adaptedFiles": 9,
+    "copiedUnmodified": 23,
+    "curationOnly": 9,
+    "unmatchedPairs": 0
+  }
+}

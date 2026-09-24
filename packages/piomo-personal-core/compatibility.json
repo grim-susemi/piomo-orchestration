@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "omo": "5.0.0-0.beta.51",
+  "senpi": "2026.9.9-2",
+  "families": ["gemini", "muse-spark", "ox-alpha", "gpt"],
+  "modelCounts": {"gemini": 5, "muse-spark": 7, "ox-alpha": 1, "gpt": 13},
+  "phaseStatus": "first-package-only",
+  "requiresHostFeatures": ["model_select_prepare"]
+}

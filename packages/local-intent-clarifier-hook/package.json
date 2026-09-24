@@ -1,0 +1,17 @@
+{
+  "name": "local-intent-clarifier-hook",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "files": [
+    "extensions/intent-clarifier-hook.ts",
+    "extensions/lib/custom-mode-policy.ts",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/intent-clarifier-hook.ts"
+    ]
+  }
+}
