@@ -5,7 +5,20 @@ Owner-authored source curation for the PiOMO orchestration modpack. This is an
 No generated OMO/Senpi bundles, engine outputs, raw machine settings or auth material are
 published here; recorded hashes are metadata only.
 
-## Contract
+## Current stable-500 record
+
+The current selected tuning source and companion are recorded separately in
+`docs/current-state.md` and `provenance/current-state.json`. The two commits
+and installed-state descriptions below are historical; they do not describe
+today's stable-500 installation. Current launcher/R6/overlay authoring sources
+remain named coverage gaps, not a runnable clone. See the sanitized direction
+in `docs/management-direction.md`. No deployment or remote publication is
+implied by this prepared tree.
+
+The existing requested-update acceptance contract and current native read-path
+limits are recorded in `docs/update-preservation.md`.
+
+## Historical contract
 
 See `docs/version-history-contract.md` for the approved two-commit scope
 (`installed-current` snapshot first — the pre-refresh installed baseline, committed as
@@ -30,7 +43,7 @@ committed.
 This repository carries two distinct classes of files, and they are never conflated:
 
 - **As-installed bytes (byte-identical copies).** Some files are published exactly as
-  installed, e.g. `extensions/omo-model-tuning.ts` and its companion test (verified
+  installed at the historical commit, e.g. `extensions/omo-model-tuning.ts` and its companion test (verified
   against the `65ac2d42...` / `8901043a...` identities in
   `provenance/installed-state.json`), `scripts/pr-watch.prune.test.mjs`, and most
   package files.
@@ -69,7 +82,7 @@ this worktree.
 
 `provenance/installed-state.json` records the pre-refresh installed chain at commit 1: OMO generated
 tail `f1aa0994...`, the seven Senpi (`@code-yeongyu/senpi` 2026.9.23-5) installed
-preimage hashes, the current loose tuning extension `65ac2d42...`, the live agent
+preimage hashes, the then-current loose tuning extension `65ac2d42...`, the live agent
 settings hash `8d3fa7a6...` (drifted from the previously recorded `a82b4322...`; the
 current value is recorded after a read-only re-hash), the live engine `omo.jsonc` hash
 `c35a9a6b...` (unchanged), and three SOURCE_GAP authored-input hashes. The agent

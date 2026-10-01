@@ -1,0 +1,9 @@
+.gitattributes text eol=lf
+README.md text eol=lf
+extensions/omo-model-tuning.ts text eol=lf
+extensions/omo-model-tuning.test.js text eol=lf
+docs/current-state.md text eol=lf
+docs/management-direction.md text eol=lf
+docs/update-preservation.md text eol=lf
+provenance/current-state.json text eol=lf
+provenance/allowlist.json text eol=lf

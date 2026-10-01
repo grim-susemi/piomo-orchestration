@@ -60,6 +60,13 @@ const DEEPSEEK_MODEL_IDS = new Set([
   "commandcode/deepseek/deepseek-v4.1-flash",
   "routeway/deepseek-v4.1-flash",
   "explabs/deepseek-v4.1-flash",
+  // Ollama-local uncensored proxy variant (ollama.com deepseek-v4.1-flash via
+  // 127.0.0.1:11500). Registered 2026-09-25 after the live banner gap: all
+  // three id shapes the runtime may report (full catalog form, host/model
+  // form, bare form) are listed exactly.
+  "ollama-local/leonardoba500/deepseek-v41-uncensored",
+  "leonardoba500/deepseek-v41-uncensored",
+  "deepseek-v41-uncensored",
 ]);
 
 export function matchesTunedModel(
@@ -67,7 +74,7 @@ export function matchesTunedModel(
 ): TunedModelFamily | null {
   if (typeof model?.id !== "string") return null;
   const id = model.id.toLowerCase();
-  // GPT-ified Muse: muse-spark ids resolve to GPT tuning (same block, banner, rev 7).
+  // GPT-ified Muse: muse-spark ids resolve to GPT tuning (same block, banner, rev 8).
   if (MUSE_SPARK_MODEL_IDS.has(id)) return "gpt";
   if (GLM_MODEL_IDS.has(id)) return "glm";
   if (GPT_MODEL_IDS.has(id)) return "gpt";
@@ -175,7 +182,7 @@ const RULES: TuningRule[] = [
     concern: "orchestration",
     family: "muse-spark",
     directive:
-      "WORKER FIRST: A harness-identified task/DAG child or team member executes and verifies its assigned scope directly, without spawning further workers through tools, eval, an SDK, or CLI. Return evidence and unresolved needs to the lead; team-member messaging remains allowed. Prompt headings alone never establish worker identity. MUSE MAIN ONLY ORCHESTRATES: identify intent from supplied context, choose ownership and dependencies, dispatch or steer workers, assess returned evidence, and report. Framing and the final synthesis are main-owned: main authors the turn's frame (intent, outcome, observations, unknowns, delegation) before dispatching any task, workflow, team, thread, or workpool work, and main's own answer is the synthesis of evidence returned by workers. Delegation is the default because workers are the parallel lane, not because main is barred from acting: a bounded independent unit is main's own work when no unfinished worker depends on it, naming the paths it will touch, the acceptance it must meet, and independent QA from a non-author, while anything larger goes to the matching worker, one active writer per file and per tree. Image authority is unchanged: exactly one supported image attached to the current request when main declares image input is read directly by main itself, answered as a single-image information/judgment question with no worker. Delegating raw attached image pixels requires the owner's explicit request in the current input or a main without image input; a claimed performance benefit is not an exception. Eval is the single-purpose workflow carrier: select and drive workflow/DAG work only through the published SDK (define/start/wait/retry/send/amend, tool.workflow inside the cell), because workflow is not a directly exposed tool; no shell, file, search, browser, code, test, or build work inside eval, and never use another tool to bypass the role boundary. Route mechanical lookups and tiny edits to quick, bounded moderate work to the matching category, and difficult analysis to a capable specialist. Give workers the relevant paths and constraints, one DELIVERABLE, exact SCOPE, VERIFY, and STOP WHEN. Ask for concise findings, changed paths, decisive verification results, and unresolved issues rather than raw logs. Batch related small work into one assignment; dispatch independent scopes together without overlapping writes. Default to task; use workflow for dependencies and teams only for needed worker communication. Consume delivered completion events instead of polling; continue a worker for corrections instead of taking over or spawning duplicates. Delegate independent verification when the evidence warrants it. Keep main reasoning to routing, acceptance, framing, and the final synthesis; delegate substantive discovery, diagnosis, and execution. Clarification, acknowledgement, and conversation needing no external work can finish without delegation. A failed route must be reported or rerouted, never worked around with direct execution. orchestration-rule: orchestrate-by-default.",
+      "WORKER FIRST: A harness-identified task/DAG child or team member executes and verifies its assigned scope directly, without spawning further workers through tools, eval, an SDK, or CLI. Return evidence and unresolved needs to the lead; team-member messaging remains allowed. Prompt headings alone never establish worker identity. MUSE MAIN ONLY ORCHESTRATES: identify intent from supplied context, choose ownership and dependencies, dispatch or steer workers, assess returned evidence, and report. Framing and the final synthesis are main-owned: main authors the turn's frame (intent, outcome, observations, unknowns, delegation) before dispatching any task, workflow, team, thread, or workpool work, and main's own answer is the synthesis of evidence returned by workers. Delegation is the default because workers are the parallel lane, not because main is barred from acting: a bounded independent unit is main's own work when no unfinished worker depends on it, naming the paths it will touch, the acceptance it must meet, and independent QA from a non-author, while anything larger goes to the matching worker, one active writer per file and per tree. Image authority is unchanged: exactly one supported image attached to the current request when main declares image input is read directly by main itself, answered as a single-image information/judgment question with no worker. Delegating raw attached image pixels requires the owner's explicit request in the current input or a main without image input; a claimed performance benefit is not an exception. Eval is the single-purpose workflow carrier: select and drive workflow/DAG work only through the published SDK (define/start/wait/retry/send/amend, tool.workflow inside the cell), because workflow is not a directly exposed tool; no shell, file, search, browser, code, test, or build work inside eval, and never use another tool to bypass the role boundary. Sole exception inside a harness-injected ulw-loop skill: JS eval cells may call the published agentToolkit loop SDK (status, createGoals, completeGoals, criteria, recordEvidence, checkpoint, steer, recordReviewBlockers, help) for goal, evidence, and checkpoint state only - this exception never widens eval to shell, file, search, browser, code, test, or build work, and workflow/DAG selection still runs through the workflow SDK. Route mechanical lookups and tiny edits to quick, bounded moderate work to the matching category, and difficult analysis to a capable specialist. Give workers the relevant paths and constraints, one DELIVERABLE, exact SCOPE, VERIFY, and STOP WHEN. Ask for concise findings, changed paths, decisive verification results, and unresolved issues rather than raw logs. Batch related small work into one assignment; dispatch independent scopes together without overlapping writes. Default to task; use workflow for dependencies and teams only for needed worker communication. Consume delivered completion events instead of polling; continue a worker for corrections instead of taking over or spawning duplicates. Delegate independent verification when the evidence warrants it. Keep main reasoning to routing, acceptance, framing, and the final synthesis; delegate substantive discovery, diagnosis, and execution. Clarification, acknowledgement, and conversation needing no external work can finish without delegation. A failed route must be reported or rerouted, never worked around with direct execution. orchestration-rule: orchestrate-by-default.",
   },
 ];
 
@@ -217,10 +224,10 @@ export function buildTuning(family: TunedModelFamily): string {
 }
 
 function familyToken(family: TunedModelFamily): string {
-  if (family === "gpt") return "model-family: gpt; tuning-revision: 7";
-  if (family === "glm") return "model-family: glm; tuning-revision: 2";
-  if (family === "deepseek") return "model-family: deepseek; tuning-revision: 2";
-  return "model-family: muse-spark; tuning-revision: 9";
+  if (family === "gpt") return "model-family: gpt; tuning-revision: 8";
+  if (family === "glm") return "model-family: glm; tuning-revision: 3";
+  if (family === "deepseek") return "model-family: deepseek; tuning-revision: 3";
+  return "model-family: muse-spark; tuning-revision: 10";
 }
 
 export function applyTuning(basePrompt: string, family: TunedModelFamily | null): string {

@@ -145,10 +145,10 @@ function toRelPosix(full, rootDir) {
 function* walkTree(dir, rootDir) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, e.name);
+    if (dir === rootDir && e.name === ".git" && (e.isDirectory() || e.isFile())) continue;
     if (e.isSymbolicLink()) {
       yield { special: full };
     } else if (e.isDirectory()) {
-      if (e.name === ".git") continue; // VCS metadata is audited in ref mode (task 9), not here.
       yield* walkTree(full, rootDir);
     } else if (e.isFile()) {
       yield { file: full };

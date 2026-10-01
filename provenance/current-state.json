@@ -1,0 +1,623 @@
+{
+  "schema": "piomo.current-state/1",
+  "observedAtUtc": "2026-10-01T16:45:44.893Z",
+  "lane": "stable-500",
+  "runtime": {
+    "omoAI": "5.1.6",
+    "senpi": "2026.9.30",
+    "baseCommit": "c5d4972f53421d31a2568f56ef1b2bc0a268fa2a",
+    "upstreamMerge": "52e8d5dd4a6534f7ff7b9ed201102d0d4519dd3d",
+    "sourceRevision": null
+  },
+  "repository": {
+    "name": "grim-susemi/piomo-orchestration",
+    "visibility": "private (Task8 observation)",
+    "independent": true,
+    "defaultBranch": "main",
+    "baseOid": "4c14d9ef463e03f1218a955ba4cef735139ad102",
+    "historicalOids": [
+      "ab208f042a617889056b681a33d2d5d858f0952e",
+      "4c14d9ef463e03f1218a955ba4cef735139ad102"
+    ],
+    "preparedBranch": "record/stable-500-current-state-20261001"
+  },
+  "components": [
+    {
+      "component": "tuning_source",
+      "sourceRevision": null,
+      "sourceRevisionReason": "deployed-only user-home file; the live bytes exist outside every VCS working tree, so no source revision can be attributed",
+      "original": {
+        "location": "<agent-dir>/extensions/omo-model-tuning.ts",
+        "sha256": "290eab18893c885041729a19f1b243d541aa4d3d1801445a50c7e66534a3feb8",
+        "bytes": 19604
+      },
+      "published": {
+        "path": "extensions/omo-model-tuning.ts",
+        "gitBlobOid": "9968a554ee6317a6e79592dda2dd9cc018a59f1a",
+        "sha256": "290eab18893c885041729a19f1b243d541aa4d3d1801445a50c7e66534a3feb8",
+        "bytes": 19604,
+        "mode": "100644",
+        "identity": "Git-normalized blob bytes"
+      },
+      "deployed": {
+        "location": "<agent-dir>/extensions/omo-model-tuning.ts",
+        "sha256": "290eab18893c885041729a19f1b243d541aa4d3d1801445a50c7e66534a3feb8",
+        "bytes": 19604,
+        "observationOnly": true
+      },
+      "rights": {
+        "classification": "owner-authored UNLICENSED",
+        "status": "reviewed in task8 rights inventory",
+        "noticeRequirements": []
+      },
+      "adaptations": [],
+      "byteParity": true,
+      "boundedBehaviorDifferences": [],
+      "dependencies": [],
+      "closure": {
+        "status": "self-verified source tests",
+        "evidence": {
+          "directHarness": true,
+          "tests": 38,
+          "passed": 38,
+          "failed": 0,
+          "assertions": 300
+        },
+        "limit": "Unit harness only; no live extension loading, application startup or model adherence."
+      },
+      "coverage": "current selected owned source and companion recoverable",
+      "status": {
+        "sourcePrepared": true,
+        "selfVerified": true,
+        "appliedByThisTask": false,
+        "runtimeVerifiedByThisTask": false,
+        "pushedByThisTask": false
+      },
+      "gap": null
+    },
+    {
+      "component": "tuning_test",
+      "sourceRevision": null,
+      "sourceRevisionReason": "deployed-only user-home file; no VCS revision for the live bytes",
+      "original": {
+        "location": "<agent-dir>/extensions/omo-model-tuning.test.js",
+        "sha256": "b3bab861d90df6db405f714c082849a65b40263a0639b54f1f0ca473ec932c76",
+        "bytes": 24173
+      },
+      "published": {
+        "path": "extensions/omo-model-tuning.test.js",
+        "gitBlobOid": "815c4ebf11bfbed11ce9db255e10915142dc14d9",
+        "sha256": "b3bab861d90df6db405f714c082849a65b40263a0639b54f1f0ca473ec932c76",
+        "bytes": 24173,
+        "mode": "100644",
+        "identity": "Git-normalized blob bytes"
+      },
+      "deployed": {
+        "location": "<agent-dir>/extensions/omo-model-tuning.test.js",
+        "sha256": "b3bab861d90df6db405f714c082849a65b40263a0639b54f1f0ca473ec932c76",
+        "bytes": 24173,
+        "observationOnly": true
+      },
+      "rights": {
+        "classification": "owner-authored UNLICENSED",
+        "status": "reviewed in task8 rights inventory",
+        "noticeRequirements": []
+      },
+      "adaptations": [],
+      "byteParity": true,
+      "boundedBehaviorDifferences": [],
+      "dependencies": [
+        "node:assert/strict",
+        "node:test",
+        "./omo-model-tuning.ts"
+      ],
+      "closure": {
+        "status": "self-verified source tests",
+        "evidence": {
+          "directHarness": true,
+          "tests": 38,
+          "passed": 38,
+          "failed": 0,
+          "assertions": 300
+        },
+        "limit": "Unit harness only; no live extension loading, application startup or model adherence."
+      },
+      "coverage": "current selected owned source and companion recoverable",
+      "status": {
+        "sourcePrepared": true,
+        "selfVerified": true,
+        "appliedByThisTask": false,
+        "runtimeVerifiedByThisTask": false,
+        "pushedByThisTask": false
+      },
+      "gap": null
+    },
+    {
+      "component": "launcher_wrapper",
+      "sourceRevision": null,
+      "sourceRevisionReason": "deployed launcher outside VCS; no revision exists",
+      "original": {
+        "location": "<stable-500>/omo.cmd",
+        "sha256": "33a07d78a1d7e76f1deee4039127869a0c8f5d01990cbc39471fdb36afa079ee",
+        "bytes": 12189
+      },
+      "published": null,
+      "deployed": {
+        "location": "<stable-500>/omo.cmd",
+        "sha256": "33a07d78a1d7e76f1deee4039127869a0c8f5d01990cbc39471fdb36afa079ee",
+        "bytes": 12189,
+        "observationOnly": true
+      },
+      "rights": {
+        "classification": "owner-authored UNLICENSED",
+        "status": "reviewed in task8 rights inventory",
+        "noticeRequirements": []
+      },
+      "adaptations": null,
+      "byteParity": null,
+      "boundedBehaviorDifferences": null,
+      "dependencies": [
+        "external installed runtime/base",
+        "external task-builtins-activation-r1/verify-overlay.mjs",
+        "lane roots and engine stamp"
+      ],
+      "closure": {
+        "status": "unavailable",
+        "evidence": null,
+        "limit": "External verify-overlay.mjs is required but not in the approved exact publication input set; launcher adaptation has no isolated execution closure here."
+      },
+      "coverage": "metadata-only; source not admitted",
+      "status": {
+        "sourcePrepared": false,
+        "selfVerified": false,
+        "appliedByThisTask": false,
+        "runtimeVerifiedByThisTask": false,
+        "pushedByThisTask": false
+      },
+      "gap": "External verify-overlay.mjs is required but not in the approved exact publication input set; launcher adaptation has no isolated execution closure here."
+    },
+    {
+      "component": "reentry_r6",
+      "sourceRevision": null,
+      "sourceRevisionReason": "deployed staging entry outside VCS; no revision exists",
+      "original": {
+        "location": "<stable-500>/staging/omo-memory-selector-entry-r6.mjs",
+        "sha256": "74cebb2f463f7e14c374074126422d745b2ea22b8ccd174faa1ab8664054afa8",
+        "bytes": 8838
+      },
+      "published": null,
+      "deployed": {
+        "location": "<stable-500>/staging/omo-memory-selector-entry-r6.mjs",
+        "sha256": "74cebb2f463f7e14c374074126422d745b2ea22b8ccd174faa1ab8664054afa8",
+        "bytes": 8838,
+        "observationOnly": true
+      },
+      "rights": {
+        "classification": "owner-authored UNLICENSED",
+        "status": "reviewed in task8 rights inventory",
+        "noticeRequirements": []
+      },
+      "adaptations": null,
+      "byteParity": null,
+      "boundedBehaviorDifferences": null,
+      "dependencies": [
+        "external installed runtime/base",
+        "external task-builtins-activation-r1/verify-overlay.mjs",
+        "lane roots and engine stamp"
+      ],
+      "closure": {
+        "status": "unavailable",
+        "evidence": null,
+        "limit": "Dynamic verify-overlay.mjs import is outside the approved exact source set; lane/stock dispatch adapter is not certified without its admission review."
+      },
+      "coverage": "metadata-only; source not admitted",
+      "status": {
+        "sourcePrepared": false,
+        "selfVerified": false,
+        "appliedByThisTask": false,
+        "runtimeVerifiedByThisTask": false,
+        "pushedByThisTask": false
+      },
+      "gap": "Dynamic verify-overlay.mjs import is outside the approved exact source set; lane/stock dispatch adapter is not certified without its admission review."
+    },
+    {
+      "component": "overlay_build",
+      "sourceRevision": null,
+      "sourceRevisionReason": "staging build script outside VCS; no revision exists",
+      "original": {
+        "location": "<stable-500>/staging/task-builtins-5.1.6-r1/build.mjs",
+        "sha256": "476edd4149efcbee790210a570e633360b61821fc4e71d71633ef974736ea3b1",
+        "bytes": 7462
+      },
+      "published": null,
+      "deployed": {
+        "location": "<stable-500>/staging/task-builtins-5.1.6-r1/build.mjs",
+        "sha256": "476edd4149efcbee790210a570e633360b61821fc4e71d71633ef974736ea3b1",
+        "bytes": 7462,
+        "observationOnly": true
+      },
+      "rights": {
+        "classification": "OmO SUL 1.0 embedded seams plus owner UNLICENSED transforms",
+        "status": "reviewed in task8 rights inventory",
+        "noticeRequirements": [
+          "licenses/omo-SUL.txt",
+          "prominent MODIFIED notice for seven embedded seams"
+        ]
+      },
+      "adaptations": null,
+      "byteParity": null,
+      "boundedBehaviorDifferences": null,
+      "dependencies": [
+        "external omo-ai 5.1.6 plugin bases",
+        "external Senpi 2026.9.30 runtime",
+        "./tests.mjs"
+      ],
+      "closure": {
+        "status": "unavailable",
+        "evidence": null,
+        "limit": "Companion execution closure spawns nested native workers, forbidden in this child lane. Machine-path adapter and generated-overlay parity are not verified; mixed-origin source remains excluded."
+      },
+      "coverage": "metadata-only; source not admitted",
+      "status": {
+        "sourcePrepared": false,
+        "selfVerified": false,
+        "appliedByThisTask": false,
+        "runtimeVerifiedByThisTask": false,
+        "pushedByThisTask": false
+      },
+      "gap": "Companion execution closure spawns nested native workers, forbidden in this child lane. Machine-path adapter and generated-overlay parity are not verified; mixed-origin source remains excluded."
+    },
+    {
+      "component": "overlay_tests",
+      "sourceRevision": null,
+      "sourceRevisionReason": "staging test harness outside VCS; no revision exists",
+      "original": {
+        "location": "<stable-500>/staging/task-builtins-5.1.6-r1/tests.mjs",
+        "sha256": "03e0a10ee6e7310e988840f87448f78cc7978426023186eb0fe6737095befa11",
+        "bytes": 17317
+      },
+      "published": null,
+      "deployed": {
+        "location": "<stable-500>/staging/task-builtins-5.1.6-r1/tests.mjs",
+        "sha256": "03e0a10ee6e7310e988840f87448f78cc7978426023186eb0fe6737095befa11",
+        "bytes": 17317,
+        "observationOnly": true
+      },
+      "rights": {
+        "classification": "owner-authored UNLICENSED",
+        "status": "reviewed in task8 rights inventory",
+        "noticeRequirements": []
+      },
+      "adaptations": null,
+      "byteParity": null,
+      "boundedBehaviorDifferences": null,
+      "dependencies": [
+        "external omo-ai 5.1.6 plugin bases",
+        "external Senpi 2026.9.30 runtime",
+        "./build.mjs"
+      ],
+      "closure": {
+        "status": "unavailable",
+        "evidence": null,
+        "limit": "Imports builder and spawns native parent/child CLI probes; nested workers are forbidden in this lane. Do not convert prior RESULTS.json into a fresh source test."
+      },
+      "coverage": "metadata-only; source not admitted",
+      "status": {
+        "sourcePrepared": false,
+        "selfVerified": false,
+        "appliedByThisTask": false,
+        "runtimeVerifiedByThisTask": false,
+        "pushedByThisTask": false
+      },
+      "gap": "Imports builder and spawns native parent/child CLI probes; nested workers are forbidden in this lane. Do not convert prior RESULTS.json into a fresh source test."
+    },
+    {
+      "component": "management-direction",
+      "sourceRevision": null,
+      "original": {
+        "location": "<local-direction>/piomo-github-current-state-and-parallel-direction-20261001.md",
+        "sha256": "1d171b97794667861109f028d8f358ebe1d6adf4b668a188ef7ae9468a0dfc4d",
+        "bytes": 13850
+      },
+      "published": {
+        "path": "docs/management-direction.md",
+        "gitBlobOid": "5d0517d2dfbec9cb305d3cb3c050b854b8de4c25",
+        "sha256": "a8eefe189a3d5d5329d23f427172fb06e5e549417c34550cce523add4633104b",
+        "bytes": 3562,
+        "mode": "100644"
+      },
+      "deployed": null,
+      "rights": {
+        "classification": "owner-authored UNLICENSED"
+      },
+      "adaptations": [
+        {
+          "operation": "sanitized derivative rewrite",
+          "reason": "Remove machine-specific original locations and private receipt details; carry D1-D6 with historical/current and evidence distinctions.",
+          "normalization": "LF UTF-8",
+          "byteParity": false,
+          "boundedBehaviorDifference": "Documentation only; no executable or deployment change."
+        }
+      ],
+      "closure": {
+        "status": "read-based document QA; no prose snapshot test"
+      },
+      "coverage": "D1-D6 management decisions retained",
+      "status": {
+        "directionFinalized": true,
+        "sourcePrepared": true,
+        "selfVerified": true,
+        "applied": false,
+        "runtimeVerified": false,
+        "pushed": false
+      }
+    },
+    {
+      "component": "publication-auditor",
+      "sourceRevision": "4c14d9ef463e03f1218a955ba4cef735139ad102",
+      "original": {
+        "location": "<historical-repository>/qa/audit-publish.mjs",
+        "sha256": "86b80b001d2d914de3dea43f17718828ba077ecf40fedef0c5b2b456ec233f16",
+        "bytes": 10287,
+        "gitBlobOid": "b8104af97389080553dd119573212f182c17dac7"
+      },
+      "published": {
+        "path": "qa/audit-publish.mjs",
+        "gitBlobOid": "cde42224a1f2ba405a16e7f95db72f2dfce3c2ed",
+        "sha256": "029a40550c2d563cf0ac8d0f9eac89c85f998548829244da0876b0ad91951d2d",
+        "bytes": 9986,
+        "mode": "100644",
+        "identity": "Git-normalized blob bytes; worktree LF"
+      },
+      "deployed": null,
+      "rights": {
+        "classification": "existing admitted owned repository source; repository UNLICENSED",
+        "status": "existing exact admission retained; no new upstream source or allowlist entry",
+        "noticeRequirements": []
+      },
+      "adaptations": [
+        {
+          "operation": "exact root Git-administration exclusion before type dispatch; remove broad nested-directory exclusion",
+          "reason": "Root .git directory and linked-worktree regular pointer are administration, not publication source. Nested .git and lookalikes remain default-denied; symlinks still rejected.",
+          "byteParity": false,
+          "boundedBehaviorDifference": "Worktree enumeration only; root regular .git pointer excluded, nested .git directories no longer silently ignored. Ref-mode, path allowlist, token scan and nonregular-file rejection unchanged."
+        },
+        {
+          "operation": "CRLF to LF and final newline",
+          "reason": "Local patch serialization; disclosed normalized publication bytes differ from original worktree bytes.",
+          "byteParity": false,
+          "boundedBehaviorDifference": "No JavaScript behavior difference."
+        }
+      ],
+      "byteParity": false,
+      "dependencies": [
+        "node:crypto",
+        "node:fs",
+        "node:path",
+        "node:child_process",
+        "external Git for ref mode"
+      ],
+      "closure": {
+        "status": "changed-source syntax and source-bound worktree regression QA",
+        "limit": "Source audit only; no source commit, ref-bound publication, installed-source update or model behavior verification."
+      },
+      "coverage": "owned source auditor; original failure and scoped repair proof retained outside curated tree",
+      "status": {
+        "sourcePrepared": true,
+        "selfVerified": true,
+        "appliedByThisTask": false,
+        "runtimeVerifiedByThisTask": false,
+        "pushedByThisTask": false
+      }
+    }
+  ],
+  "configuration": {
+    "agentSettings": {
+      "location": "<agent-dir>/settings.json",
+      "sha256": "d03a2a2fa782269666cab3d941c62daa8fee4330ded908c046d2c2961ddbb6e1",
+      "bytes": 7619,
+      "contentPublished": false,
+      "semanticFields": {
+        "defaultProvider": {
+          "sha256": "5566000e934123b73048ee2928c74b93c9af4a3f768f91214ceb3770da4557c3",
+          "matchesR2SafeBaseline": true
+        },
+        "defaultModel": {
+          "sha256": "2da8faee9a3ed7401be88eab08f9f50de122763b54cdce94dced4c0d06e0ee4f",
+          "matchesR2SafeBaseline": true
+        },
+        "defaultThinkingLevel": {
+          "sha256": "b57c4299afe3cda154124bdb96ceaf618a9d8d9cd8d2c8f6580ff26faa5fe5ca",
+          "matchesR2SafeBaseline": true
+        },
+        "modelThinkingLevels": {
+          "sha256": "6e6d066f8808e87a351a159a45e15aa0f38d251e7c908babaea1bcfeb9a7ca4c",
+          "matchesR2SafeBaseline": true
+        },
+        "packages": {
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "matchesR2SafeBaseline": true
+        }
+      },
+      "drift": "Raw byte identity may change; all safe per-field identities reproduce the confirmed R2 semantic baseline."
+    },
+    "engineConfig": {
+      "location": "<lane-home>/.omo/omo.jsonc",
+      "sha256": "47a5d0a703dd6d4cd41fa9c72775675c3c33ab45609d1ac522d8d302a093cc68",
+      "bytes": 135381,
+      "contentPublished": false,
+      "observedIn": "confirmed Task8 inventory"
+    },
+    "safeStructure": {
+      "defaultProvider": "chatgpt-subscription",
+      "defaultModel": "gpt-6.1-sol",
+      "defaultThinking": "high",
+      "selectedProfile": "native-cmd-glm-deepseek",
+      "selectedMappingSource": "profile native agents/categories resolved against native models; no mapping changed"
+    }
+  },
+  "applicability": {
+    "legacyTuningSol61": {
+      "bareFamily": null,
+      "subscriptionFamily": null,
+      "nullFamilyInputUnchanged": true,
+      "evidence": "3 pure exported-function assertions; no factory/startup"
+    },
+    "liveLoading": "not verified by this task",
+    "modelAdherence": "not tested",
+    "nativeParallel": {
+      "nativeSource": "<senpi>/dist/core/dynamic-prompt/working-task.js:4",
+      "sourceRuleObserved": true,
+      "path": "eval + parallel(thunks)",
+      "actualIndependentReadResults": 2,
+      "readInputs": [
+        "native working-task source",
+        "current tuning event-handler source"
+      ],
+      "scope": "Current session read-path applicability only; not model adherence, fresh engine loading, update survival or speed.",
+      "duplicatePromptAdded": false,
+      "modelCalls": 0,
+      "freshEngineStarted": false
+    },
+    "requestedUpdatePreservation": {
+      "contract": "docs/update-preservation.md",
+      "d4AcceptanceSteps": 7,
+      "existingProcedureOnly": true,
+      "postUpdateChecks": "future; unperformed until a separately requested update",
+      "updateInstalled": false,
+      "runtimeVerified": false,
+      "pushed": false
+    }
+  },
+  "historicalCoverage": {
+    "slot4SourceGap": [
+      {
+        "authoredInput": "qa/gate-repair-anchor.mjs",
+        "sha256": "ae5284618c065acf48e7872260ee35d1cb2c6af8dfc45d5700fc1a39ce5878de"
+      },
+      {
+        "authoredInput": "qa/gate-request-fixture.test.mjs",
+        "sha256": "25ee327e6a1bc5fd695792754221860cfad1007589c4c811a49fa1871fe3f958"
+      },
+      {
+        "authoredInput": "patches/deltas/slot-4-gateRepair.insert.js",
+        "sha256": "9b6d4ba593266f22b8977decfd9db3922fd1abb51458f7b86c88caf034b99a3a"
+      }
+    ],
+    "unrecoverable": true,
+    "sealedRefresh04": {
+      "sourceFiles": 17,
+      "record": "provenance/refresh-04.json",
+      "historicalStatus": "applied",
+      "notRecoveryOfSlot4Gap": true
+    }
+  },
+  "externalInputs": {
+    "notShipped": [
+      "omo-ai 5.1.6 installed plugin/runtime bytes",
+      "Senpi 2026.9.30 runtime/dependencies",
+      "task-builtins activation verifier and pins",
+      "engine stamp and lane state",
+      "historical desktop mirror test",
+      "credentials",
+      "raw settings/models/configuration",
+      "generated outputs and private evidence"
+    ],
+    "closureStatus": "unavailable for current launcher/R6/overlay; no standalone clone restoration"
+  },
+  "publication": {
+    "admittedCurrentPaths": [
+      ".gitattributes",
+      "extensions/omo-model-tuning.ts",
+      "extensions/omo-model-tuning.test.js",
+      "docs/current-state.md",
+      "docs/management-direction.md",
+      "docs/update-preservation.md",
+      "provenance/current-state.json",
+      "qa/audit-publish.mjs"
+    ],
+    "exactPathLF": true,
+    "allowlist": "provenance/allowlist.json",
+    "candidatePathsAdmitted": false,
+    "selfDigestIncluded": false,
+    "enclosingCommitOidIncluded": false,
+    "independentGateRequired": true,
+    "qaStatus": "source-verified; independent gate pending",
+    "unresolvedBoundaries": [],
+    "auditRepair": {
+      "source": "qa/audit-publish.mjs",
+      "metadataNeverAdmitted": true,
+      "scope": "source-only reversible CW repair; existing exact admitted path",
+      "originalFailuresPreserved": true,
+      "independentGateRequired": true,
+      "refBoundPublicationAudit": "future, requires an approved immutable source commit; not run against old HEAD as proof of prepared delta"
+    },
+    "machinePathReview": {
+      "approvedPlanLines": {
+        "changedBlobReview": 129,
+        "sealedHistoryPreservation": [
+          84,
+          242
+        ]
+      },
+      "changedBlobs": "reviewed without machine-specific absolute paths",
+      "wholeTreeMachinePathFree": false,
+      "historicalStatus": "NOTE, not full-tree path-free PASS",
+      "inheritedCommentLiterals": 8,
+      "locations": [
+        {
+          "path": "patches/refresh-04/patches/deltas/slot-4-gateRepair.insert.js",
+          "lines": [
+            26
+          ]
+        },
+        {
+          "path": "patches/refresh-04/qa/gate-repair-anchor.mjs",
+          "lines": [
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58
+          ]
+        }
+      ],
+      "sealedBytesUnchanged": true,
+      "mandatoryWholeTreeChecks": [
+        "valid UTF-8",
+        "no NUL/binary",
+        "regular modes 100644/100755",
+        "secret/token scan"
+      ]
+    },
+    "currentStateDocumentRepair": {
+      "path": "docs/current-state.md",
+      "originalSha256": "22e791e7c85e2b46a0a545dbd21d5cdd79b7fd192e7beb2967eb5f7885a6ccc2",
+      "originalBytes": 5195,
+      "publishedSha256": "ab06962bb68a885b6b6cab3e5e41bf10f39ce129c7bc40c7c5d30d70f7b2f03e",
+      "publishedBytes": 5491,
+      "gitBlobOid": "9ea202afb3bb470a4e06b0f2d93b50d8d3f2b76d",
+      "operation": "replace obsolete blocked-audit section with exact source-repair and approved changed-blob/history distinction",
+      "byteParity": false,
+      "boundedBehaviorDifference": "Documentation only; independent review and later publication approval remain required."
+    }
+  },
+  "status": {
+    "directionFinalized": true,
+    "sourcePrepared": true,
+    "selfVerified": "tuning pair and pure matcher evidence reused on exact hash-equal pair; changed auditor source QA bound externally",
+    "applied": false,
+    "runtimeVerified": false,
+    "pushed": false,
+    "overall": "prepared current baseline with four named current executable-source gaps",
+    "publicationQA": "source-verified; independent gate pending"
+  },
+  "limits": [
+    "Source history is partial, not a reproducible release.",
+    "Hashes cannot restore missing source.",
+    "Prior deployed observations and old overlay receipts are not fresh execution checks.",
+    "No commits, merges, pushes, live changes, nested workers or model pilots."
+  ]
+}

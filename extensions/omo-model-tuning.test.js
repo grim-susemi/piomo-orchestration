@@ -118,7 +118,7 @@ if (require.main === module) {
     const tuned = applyTuning(basePrompt, "gpt");
     assert.equal(count(tuned, TUNING_START_MARKER), 1);
     assert.equal(count(tuned, TUNING_END_MARKER), 1);
-    assert.equal(count(tuned, "model-family: gpt; tuning-revision: 7"), 1);
+    assert.equal(count(tuned, "model-family: gpt; tuning-revision: 8"), 1);
     assert.equal(applyTuning(tuned, "gpt"), tuned);
     assert.equal(tuned, `${basePrompt}\n\n${buildTuning("gpt")}`);
   });
@@ -127,7 +127,7 @@ if (require.main === module) {
     const tuned = applyTuning(basePrompt, "glm");
     assert.equal(count(tuned, TUNING_START_MARKER), 1);
     assert.equal(count(tuned, TUNING_END_MARKER), 1);
-    assert.equal(count(tuned, "model-family: glm; tuning-revision: 2"), 1);
+    assert.equal(count(tuned, "model-family: glm; tuning-revision: 3"), 1);
     assert.equal(applyTuning(tuned, "glm"), tuned);
     assert.equal(tuned, `${basePrompt}\n\n${buildTuning("glm")}`);
   });
@@ -168,7 +168,7 @@ if (require.main === module) {
       const original = applyTuning(basePrompt, family);
       const gpt = applyTuning(original, "gpt");
       assert.equal(count(gpt, "model-family:"), 1);
-      assert.equal(count(gpt, "model-family: gpt; tuning-revision: 7"), 1);
+      assert.equal(count(gpt, "model-family: gpt; tuning-revision: 8"), 1);
       assert.equal(applyTuning(gpt, family), original);
     }
   });
@@ -178,7 +178,7 @@ if (require.main === module) {
       const original = applyTuning(basePrompt, family);
       const glm = applyTuning(original, "glm");
       assert.equal(count(glm, "model-family:"), 1);
-      assert.equal(count(glm, "model-family: glm; tuning-revision: 2"), 1);
+      assert.equal(count(glm, "model-family: glm; tuning-revision: 3"), 1);
       assert.equal(applyTuning(glm, family), original);
     }
   });
@@ -188,7 +188,7 @@ if (require.main === module) {
       TUNING_END_MARKER, "fixture-context: retained"].join("\n");
     const refreshed = applyTuning(previous, "gpt");
     assert.equal(count(refreshed, "tuning-revision: 0"), 0);
-    assert.equal(count(refreshed, "model-family: gpt; tuning-revision: 7"), 1);
+    assert.equal(count(refreshed, "model-family: gpt; tuning-revision: 8"), 1);
     assert.ok(refreshed.startsWith(`${basePrompt}\n\nfixture-context: retained`));
     assert.equal(applyTuning(refreshed, "gpt"), refreshed);
   });
@@ -198,7 +198,7 @@ if (require.main === module) {
       TUNING_END_MARKER, "fixture-context: retained"].join("\n");
     const refreshed = applyTuning(previous, "glm");
     assert.equal(count(refreshed, "tuning-revision: 0"), 0);
-    assert.equal(count(refreshed, "model-family: glm; tuning-revision: 2"), 1);
+    assert.equal(count(refreshed, "model-family: glm; tuning-revision: 3"), 1);
     assert.ok(refreshed.startsWith(`${basePrompt}\n\nfixture-context: retained`));
     assert.equal(applyTuning(refreshed, "glm"), refreshed);
   });
@@ -248,7 +248,7 @@ if (require.main === module) {
 
     assert.equal(count(refreshed, TUNING_START_MARKER), 1);
     assert.equal(count(refreshed, "tuning-revision: 7"), 0);
-    assert.equal(count(refreshed, "tuning-revision: 9"), 1);
+    assert.equal(count(refreshed, "tuning-revision: 10"), 1);
     assert.ok(refreshed.startsWith(`${basePrompt}\n\nfixture-context: retained`));
     assert.equal(applyTuning(refreshed, "muse-spark"), refreshed);
   });
@@ -259,7 +259,7 @@ if (require.main === module) {
 
     assert.equal(count(glm, TUNING_START_MARKER), 1);
     assert.equal(count(glm, TUNING_END_MARKER), 1);
-    assert.equal(count(glm, "model-family: glm; tuning-revision: 2"), 1);
+    assert.equal(count(glm, "model-family: glm; tuning-revision: 3"), 1);
     assert.equal(count(glm, "model-family: muse-spark"), 0);
   });
 
@@ -270,7 +270,7 @@ if (require.main === module) {
 
     assert.equal(count(repaired, TUNING_START_MARKER), 1);
     assert.equal(count(repaired, TUNING_END_MARKER), 1);
-    assert.equal(count(repaired, "model-family: glm; tuning-revision: 2"), 1);
+    assert.equal(count(repaired, "model-family: glm; tuning-revision: 3"), 1);
     assert.ok(repaired.indexOf(orphanFragment) < repaired.indexOf(TUNING_START_MARKER));
   });
 
@@ -299,7 +299,7 @@ if (require.main === module) {
     assert.equal(count(composed, TUNING_START_MARKER), 1);
     assert.equal(count(composed, TUNING_END_MARKER), 1);
     assert.equal(count(composed, "model-family:"), 1);
-    assert.equal(count(composed, "model-family: glm; tuning-revision: 2"), 1);
+    assert.equal(count(composed, "model-family: glm; tuning-revision: 3"), 1);
     assert.equal(count(composed, "model-family: gpt"), 0);
     assert.ok(composed.indexOf(TUNING_END_MARKER) < composed.indexOf(wikiAppend));
   });
@@ -307,8 +307,10 @@ if (require.main === module) {
   // --- DeepSeek V4.1 main-only role gate (Todo 2 RED tests) ---
 
   const deepseekIds = ["deepseek-v4.1-flash", "ollama/deepseek-v4.1-flash", "commandcode/deepseek-v4.1-flash",
-    "routeway/deepseek-v4.1-flash", "explabs/deepseek-v4.1-flash"];
-  const DEEPSEEK_TOKEN = "model-family: deepseek; tuning-revision: 2";
+    "routeway/deepseek-v4.1-flash", "explabs/deepseek-v4.1-flash",
+    "ollama-local/leonardoba500/deepseek-v41-uncensored",
+    "leonardoba500/deepseek-v41-uncensored", "deepseek-v41-uncensored"];
+  const DEEPSEEK_TOKEN = "model-family: deepseek; tuning-revision: 3";
 
   function factoryWith(kind) {
     const handlers = new Map();
@@ -335,6 +337,11 @@ if (require.main === module) {
     assert.equal(matchesTunedModel({ id: "openai-codex/gpt-6-astra" }), "gpt");
     assert.equal(matchesTunedModel({ id: "ollama/glm-5.3" }), "glm");
     assert.equal(matchesTunedModel({ id: "meta/muse-spark-1.3" }), "gpt");
+  });
+
+  test("matches the ollama-local leonardoba500 uncensored DeepSeek ids", () => {
+    assert.equal(matchesTunedModel({ id: "deepseek-v41-uncensored" }), "deepseek");
+    assert.equal(matchesTunedModel({ id: "ollama-local/leonardoba500/deepseek-v41-uncensored" }), "deepseek");
   });
 
   test("bare deepseek-v4.1-flash (the id observed by the installed CLI) follows the main-only gate", () => {
@@ -371,9 +378,9 @@ if (require.main === module) {
     assert.ok(tuned.startsWith(basePrompt));
     assert.equal(applyTuning(tuned, "deepseek"), tuned);
     // The deepseek block must not leak other families' revision tokens.
-    assert.equal(count(tuned, "model-family: gpt; tuning-revision: 7"), 0);
-    assert.equal(count(tuned, "model-family: glm; tuning-revision: 2"), 0);
-    assert.equal(count(tuned, "model-family: muse-spark; tuning-revision: 9"), 0);
+    assert.equal(count(tuned, "model-family: gpt; tuning-revision: 8"), 0);
+    assert.equal(count(tuned, "model-family: glm; tuning-revision: 3"), 0);
+    assert.equal(count(tuned, "model-family: muse-spark; tuning-revision: 10"), 0);
   });
 
   test("deepseek main includes the two shipped GPT orchestration rules alongside its own rules", () => {
@@ -404,7 +411,7 @@ if (require.main === module) {
     assert.equal(count(interactiveResult.systemPrompt, DEEPSEEK_TOKEN), 1);
     // Same provider/model id on the interactive session keeps other-family blocks working.
     const glmResult = interactiveHandler(event, { model: { id: "ollama/glm-5.3" } });
-    assert.equal(count(glmResult.systemPrompt, "model-family: glm; tuning-revision: 2"), 1);
+    assert.equal(count(glmResult.systemPrompt, "model-family: glm; tuning-revision: 3"), 1);
 
     for (const kind of ["worker", undefined]) {
       const handlers = factoryWith(kind);
@@ -462,6 +469,19 @@ if (require.main === module) {
     handlers.get("model_select")({ type: "model_select" },
       { model: { id: "some-other-model" }, ui: { setHeader: () => { untouched = false; } } });
     assert.ok(untouched);
+  });
+
+  test("GPT tuning carries the harness-injected ulw-loop eval exception sentence", () => {
+    const gpt = buildTuning("gpt");
+    assert.ok(gpt.includes("Sole exception inside a harness-injected ulw-loop skill"));
+    assert.ok(gpt.includes("agentToolkit loop SDK"));
+  });
+
+  test("applyTuning dedup: applying the same family token twice returns the input unchanged", () => {
+    for (const family of ["gpt", "glm", "deepseek", "muse-spark"]) {
+      const once = applyTuning(basePrompt, family);
+      assert.equal(applyTuning(once, family), once, family);
+    }
   });
 
   after(() => {
