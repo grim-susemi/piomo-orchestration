@@ -1,0 +1,48 @@
+Final implementation verification excerpts, 2026-10-13 UTC.
+These are curated copies of observed tool output, not a claim that every
+earlier diagnostic run was green.
+
+Command: node --test test/repair.test.mjs
+Exit code: 0
+PASS independent label and resume command preserve source, session and sequence
+PASS a loaded self path does not make the replacement defer to itself
+PASS another user reporter is not hidden by the replacement
+PASS an unnamed session clears display metadata instead of sending rejected empty labels
+tests 4
+pass 4
+fail 0
+cancelled 0
+skipped 0
+duration_ms 73.5744
+
+Command: HERDR_QA_WINDOW_HANDLE=657382 node --test test/real-launch.test.mjs
+Monitor: mon_R3DY6Y3Z2CBWY9MJ / bash_17
+Exit code: 0
+PASS actual bundle reports builtin ownership and reproduces native-exit loss
+REPAIR_STALE_SEQUENCE_IGNORED
+REPAIR_RELOAD_PRESERVED
+REPAIR_NEW_SESSION_PRESERVED
+REPAIR_FIXTURE_CLOSED w1:pH9
+REPAIR_COLD_CREATED w1:pHA
+REPAIR_RESUME_PRESERVED 01a13509-5717-78f6-9a9a-787d80d6afee
+REPAIR_COLD_CLOSED w1:pHA
+REPAIR_COLD_CREATED w1:pHB
+REPAIR_ROLLBACK_STOCK_RESTORED
+REPAIR_COLD_CLOSED w1:pHB
+PASS independent reporter loads once and preserves native-exit, state and replacement contracts
+tests 2
+pass 2
+fail 0
+cancelled 0
+skipped 0
+duration_ms 22248.582
+
+Latest visual artifacts:
+evidence/repair-working.png: repair-pH9 present with orange status dot
+evidence/repair-blocked.png: repair-pH9 present with pink status dot
+evidence/repair-quit.png: repair-pH9 absent
+Lead inspected all three actual Orca/Herdr sidebar captures.
+
+Baseline failure and resume/metadata REDs are described in repair/QA.ko.md.
+LSP: unavailable, typescript-language-server not installed.
+No live activation or existing-owner recovery was performed.
