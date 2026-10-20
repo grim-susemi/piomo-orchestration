@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "note": "pristine sha256 = installed senpi 2026.10.19; patched sha256 = patch.mjs --apply output on a scratch copy of the same dist. Regenerate both with the Update-time procedure in README.md.",
+  "versions": {
+    "2026.10.19": {
+      "files": {
+        "dist/core/extensions/builtin/moved-path-guard/command-paths.js": {
+          "pristine": "0639b32fb3b4249d452b73444b7e6f0a9c702df0da1a1622595198e7db1b51a2",
+          "patched": "7450f9cb11480e02c27e3511cc941ae3ae65c3d02ed1de119c28745cd2127adb"
+        },
+        "dist/core/tools/filesystem-policy.js": {
+          "pristine": "d04f4fe3705a3053652bf545f1b7a77062a7bd9e5e1b2d88de3d531d80b42ede",
+          "patched": "d6b9d4134e50524286b571281ed94727109b668b709bae09ac6cd9a6b5670da8"
+        },
+        "dist/bundle/chunks/chunk-35M5MVUZ.js": {
+          "pristine": "63bed4c409d8bb77ed0cd6705c216702757f2352c8758f2df0a8dc0dff6bb352",
+          "patched": "001a1d36b017c8b4ee96a6d8005d947611a00f9a94e53cb2a92237d8ef56cd9a"
+        },
+        "dist/bundle/chunks/session-worker.js": {
+          "pristine": "3f841c9ffb85f31407b6cff21ad0050ad1318fba4a7245b5ed571e3595b5a80d",
+          "patched": "2934dcda1710248126de4c0bf9b750eb87cfea6f03c48debb7b650bc85f3371a"
+        }
+      }
+    }
+  }
+}
