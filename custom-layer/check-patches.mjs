@@ -229,7 +229,7 @@ export function makeRows() {
   return [
     {
       name: "memory-overlay",
-      hint: "local-commit",
+      hint: "tracked",
       location: "custom-layer/memory-overlay",
       repoPath: ORCH,
       captured: [
@@ -265,7 +265,7 @@ export function makeRows() {
     },
     {
       name: "task-record-publish-retry",
-      hint: "local-commit",
+      hint: "tracked",
       location: "custom-layer/task-record-publish-retry/extension.mjs",
       repoPath: ORCH,
       sourceBlobs: [
@@ -357,7 +357,7 @@ export function makeRows() {
     },
     {
       name: "senpi-freeze-fix",
-      hint: "local-commit",
+      hint: "tracked",
       location: "custom-layer/senpi-freeze-fix",
       repoPath: ORCH,
       sourceFiles: [
