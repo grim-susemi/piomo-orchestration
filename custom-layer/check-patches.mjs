@@ -274,11 +274,12 @@ export function makeRows() {
           expected: [
             "6264d44e49cae147569237ba5e200a8f41c7ab517cda03b64f8f7839e72cd2c7",
             "4000be68adc43821153f3555b29433bd96a11d9fa328c6ff19fa0e3dc0f5a1a5",
+            "e7e232d846224ec27703f0b013e4ff7d59076c4ae1d307efa178148acb9631a9",
           ],
         },
       ],
       worktreeChecks: [
-        { path: `${ORCH}/custom-layer/task-record-publish-retry/extension.mjs`, expected: "4000be68adc43821153f3555b29433bd96a11d9fa328c6ff19fa0e3dc0f5a1a5" },
+        { path: `${ORCH}/custom-layer/task-record-publish-retry/extension.mjs`, expected: "e7e232d846224ec27703f0b013e4ff7d59076c4ae1d307efa178148acb9631a9" },
       ],
       installed: [
         {
@@ -286,10 +287,11 @@ export function makeRows() {
           expected: [
             "6264d44e49cae147569237ba5e200a8f41c7ab517cda03b64f8f7839e72cd2c7",
             "4000be68adc43821153f3555b29433bd96a11d9fa328c6ff19fa0e3dc0f5a1a5",
+            "e7e232d846224ec27703f0b013e4ff7d59076c4ae1d307efa178148acb9631a9",
           ],
         },
       ],
-      extras: ["accepted=old-HEAD|D9-target"],
+      extras: ["accepted=old-HEAD|D9-no-breaker|D9-breaker-target"],
     },
     {
       name: "settings-guard",
@@ -471,8 +473,10 @@ function evaluateRow(row, opts) {
   if (row.name === "task-record-publish-retry" && out.installed[0]) {
     const actual = out.installed[0].actual;
     out.extras.push(
-      actual === "4000be68adc43821153f3555b29433bd96a11d9fa328c6ff19fa0e3dc0f5a1a5"
-        ? "installed-version=D9-target"
+      actual === "e7e232d846224ec27703f0b013e4ff7d59076c4ae1d307efa178148acb9631a9"
+        ? "installed-version=D9-breaker-target"
+        : actual === "4000be68adc43821153f3555b29433bd96a11d9fa328c6ff19fa0e3dc0f5a1a5"
+        ? "installed-version=D9-no-breaker"
         : actual === "6264d44e49cae147569237ba5e200a8f41c7ab517cda03b64f8f7839e72cd2c7"
           ? "installed-version=old-HEAD"
           : "installed-version=other",

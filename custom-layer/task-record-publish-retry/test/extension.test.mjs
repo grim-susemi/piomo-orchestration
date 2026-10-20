@@ -45,7 +45,7 @@ function rig({ attemptCost = () => 30, sleepOver = () => 0, logCost = 0, logFail
         t += logCost;
       };
   const wrapped = createRetryingRename({ rename, sleep, now, log, platform: "win32" });
-  return { now, wrapped, attemptStarts, sleepStarts, logCalls };
+  return { now, wrapped, attemptStarts, sleepStarts, logCalls, advance: (ms) => { t += ms; } };
 }
 
 async function flush(wrapped) {
@@ -221,5 +221,35 @@ describe("retry budget", () => {
     assert.throws(() => wrapped("C:\\x\\other\\file.txt", "C:\\x\\other\\file2.txt"), /EPERM/);
     assert.equal(calls, 1);
     assert.equal(wrapped.state.pendingLog, null);
+  });
+});
+
+describe("circuit breaker (tight caller loops on a persistent lock)", () => {
+  it("after one exhaustion, 17 more calls in the cooldown cost one attempt each and never sleep", async () => {
+    const r = rig({});
+    assert.throws(() => r.wrapped(SRC, DEST), /EPERM/);
+    const afterFirst = r.now();
+    assert.equal(afterFirst, 980);
+    const sleepsBefore = r.sleepStarts.length;
+    const attemptsBefore = r.attemptStarts.length;
+    for (let i = 0; i < 17; i += 1) assert.throws(() => r.wrapped(SRC, DEST), /EPERM/);
+    assert.equal(r.sleepStarts.length, sleepsBefore);
+    assert.equal(r.attemptStarts.length, attemptsBefore + 17);
+    assert.equal(r.now() - afterFirst, 17 * 30);
+    assert.equal(r.wrapped.state.tripped, 17);
+    await flush(r.wrapped);
+    assert.equal(r.logCalls.length, 1);
+  });
+
+  it("after the cooldown the full budget is available again", async () => {
+    const r = rig({});
+    assert.throws(() => r.wrapped(SRC, DEST), /EPERM/);
+    r.advance(10000);
+    const start = r.now();
+    const sleepsBefore = r.sleepStarts.length;
+    assert.throws(() => r.wrapped(SRC, DEST), /EPERM/);
+    assert.ok(r.sleepStarts.length > sleepsBefore + 5);
+    assert.ok(r.now() - start <= 1000);
+    assert.equal(r.wrapped.state.tripped, 0);
   });
 });

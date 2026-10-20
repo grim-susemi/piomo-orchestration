@@ -17,6 +17,10 @@ const RETRYABLE = new Set(["EPERM", "EBUSY", "EACCES"]);
 const TMP_RE = /^(.*[\\/]senpi-task[\\/]tasks[\\/]st_[0-9a-z]+\.json)\.\d+\.[0-9a-f]{8}\.tmp$/i;
 export const DELAYS_MS = Object.freeze([5, 10, 20, 40, 60, 80, 100, 120, 140, 160, 165]);
 const BUDGET_MS = 1000;
+// Circuit breaker: after one call exhausts its budget (a lock that outlasts it is systemic, and
+// callers retry in a tight loop), later publications within this window make a single attempt
+// with no sleep, i.e. the stock behaviour. Blocking is bounded to ~one budget per cooldown.
+const COOLDOWN_MS = 10000;
 const ROTATE_BYTES = 1024 * 1024;
 
 export function isTaskRecordPublication(src, dest) {
@@ -62,12 +66,14 @@ export function createRetryingRename({
   now = () => performance.now(),
   log = defaultLog,
   budgetMs = BUDGET_MS,
+  cooldownMs = COOLDOWN_MS,
   delays = DELAYS_MS,
   platform = process.platform,
 } = {}) {
-  const state = { installed: false, pendingLog: null, logFailures: 0, lastLogError: null };
+  const state = { installed: false, pendingLog: null, logFailures: 0, lastLogError: null, lastExhaustedAt: null, tripped: 0 };
 
   function scheduleExhaustionLog(info) {
+    state.lastExhaustedAt = now();
     state.pendingLog = new Promise((resolve) => {
       setImmediate(() => {
         Promise.resolve()
@@ -84,6 +90,10 @@ export function createRetryingRename({
   function renameSync(src, dest) {
     if (platform !== "win32" || !isTaskRecordPublication(src, dest)) return rename(src, dest);
     const start = now();
+    if (state.lastExhaustedAt !== null && start - state.lastExhaustedAt < cooldownMs) {
+      state.tripped += 1;
+      return rename(src, dest);
+    }
     let maxAttempt = 0;
     let maxOvershoot = 0;
     let sleepIndex = 0;
