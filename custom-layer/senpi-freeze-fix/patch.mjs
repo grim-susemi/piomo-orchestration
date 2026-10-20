@@ -67,8 +67,10 @@ const WORDS_GUARD = lines(
   "                continue;"
 );
 
-const EMBEDDED_PATHS_BUNDLE_GUARD =
-  'if(`${match[1]??""}${match[2]??""}`.startsWith("//")&&/[A-Za-z][A-Za-z0-9+.-]*:$/.test(command.slice(0,match.index)))return[];';
+/** Bundled copies name the flatMap parameter differently (match, match3), so the guard takes it as an argument. */
+function embeddedPathsBundleGuard(param) {
+  return 'if(`${' + param + '[1]??""}${' + param + '[2]??""}`.startsWith("//")&&/[A-Za-z][A-Za-z0-9+.-]*:$/.test(command.slice(0,' + param + '.index)))return[];';
+}
 
 const WORDS_BUNDLE_GUARD =
   "if(/^[A-Za-z][A-Za-z0-9+.-]*:\\/\\//.test(word))continue;";
@@ -144,7 +146,7 @@ async function buildTargets() {
             "function embeddedPaths(command){return[...command.matchAll(EMBEDDED_PATH)].flatMap(match=>{let path13=",
           replacement:
             "function embeddedPaths(command){return[...command.matchAll(EMBEDDED_PATH)].flatMap(match=>{" +
-            EMBEDDED_PATHS_BUNDLE_GUARD +
+            embeddedPathsBundleGuard("match") +
             "let path13=",
         },
         {
@@ -175,7 +177,7 @@ async function buildTargets() {
             "function embeddedPaths(command){return[...command.matchAll(EMBEDDED_PATH)].flatMap(match3=>{let path28=",
           replacement:
             "function embeddedPaths(command){return[...command.matchAll(EMBEDDED_PATH)].flatMap(match3=>{" +
-            EMBEDDED_PATHS_BUNDLE_GUARD +
+            embeddedPathsBundleGuard("match3") +
             "let path28=",
         },
         {

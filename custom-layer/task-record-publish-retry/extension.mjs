@@ -17,9 +17,10 @@ const RETRYABLE = new Set(["EPERM", "EBUSY", "EACCES"]);
 const TMP_RE = /^(.*[\\/]senpi-task[\\/]tasks[\\/]st_[0-9a-z]+\.json)\.\d+\.[0-9a-f]{8}\.tmp$/i;
 export const DELAYS_MS = Object.freeze([5, 10, 20, 40, 60, 80, 100, 120, 140, 160, 165]);
 const BUDGET_MS = 1000;
-// Circuit breaker: after one call exhausts its budget (a lock that outlasts it is systemic, and
-// callers retry in a tight loop), later publications within this window make a single attempt
-// with no sleep, i.e. the stock behaviour. Blocking is bounded to ~one budget per cooldown.
+// Circuit breaker, per destination record: after one call on a record exhausts its budget (a lock
+// that outlasts it is persistent, and callers retry in a tight loop), later publications of THAT
+// record within this window make a single attempt with no sleep, i.e. the stock behaviour. Other
+// records keep the full retry budget. Blocking is bounded to ~one budget per record per cooldown.
 const COOLDOWN_MS = 10000;
 const ROTATE_BYTES = 1024 * 1024;
 
@@ -70,10 +71,16 @@ export function createRetryingRename({
   delays = DELAYS_MS,
   platform = process.platform,
 } = {}) {
-  const state = { installed: false, pendingLog: null, logFailures: 0, lastLogError: null, lastExhaustedAt: null, tripped: 0 };
+  const state = { installed: false, pendingLog: null, logFailures: 0, lastLogError: null, exhaustedAt: new Map(), tripped: 0 };
 
-  function scheduleExhaustionLog(info) {
-    state.lastExhaustedAt = now();
+  const recordKey = (dest) => path.resolve(dest).toLowerCase();
+
+  function scheduleExhaustionLog(info, dest) {
+    const key = recordKey(dest);
+    state.exhaustedAt.set(key, now());
+    if (state.exhaustedAt.size > 256) {
+      for (const [k, at] of state.exhaustedAt) if (now() - at >= cooldownMs) state.exhaustedAt.delete(k);
+    }
     state.pendingLog = new Promise((resolve) => {
       setImmediate(() => {
         Promise.resolve()
@@ -90,9 +97,12 @@ export function createRetryingRename({
   function renameSync(src, dest) {
     if (platform !== "win32" || !isTaskRecordPublication(src, dest)) return rename(src, dest);
     const start = now();
-    if (state.lastExhaustedAt !== null && start - state.lastExhaustedAt < cooldownMs) {
+    const exhaustedAt = state.exhaustedAt.get(recordKey(dest));
+    if (exhaustedAt !== undefined && start - exhaustedAt < cooldownMs) {
       state.tripped += 1;
-      return rename(src, dest);
+      const result = rename(src, dest);
+      state.exhaustedAt.delete(recordKey(dest));
+      return result;
     }
     let maxAttempt = 0;
     let maxOvershoot = 0;
@@ -111,7 +121,7 @@ export function createRetryingRename({
         const nextDelay = delays[Math.min(sleepIndex, delays.length - 1)];
         const allowance = Math.min(nextDelay, budgetMs - (now() - start) - maxAttempt - reserve);
         if (allowance <= 0) {
-          scheduleExhaustionLog(exhaustionInfo({ src, code, attempts, start, maxAttempt, now }));
+          scheduleExhaustionLog(exhaustionInfo({ src, code, attempts, start, maxAttempt, now }), dest);
           throw error;
         }
         const sleepStart = now();
@@ -119,7 +129,7 @@ export function createRetryingRename({
         maxOvershoot = Math.max(maxOvershoot, now() - sleepStart - allowance);
         sleepIndex += 1;
         if (budgetMs - (now() - start) - maxAttempt <= 0) {
-          scheduleExhaustionLog(exhaustionInfo({ src, code, attempts, start, maxAttempt, now }));
+          scheduleExhaustionLog(exhaustionInfo({ src, code, attempts, start, maxAttempt, now }), dest);
           throw error;
         }
       }

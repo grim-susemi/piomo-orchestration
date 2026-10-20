@@ -38,7 +38,9 @@ function makeRoot(version) {
   for (const file of FILES) {
     const target = join(root, file);
     mkdirSync(dirname(target), { recursive: true });
-    copyFileSync(join(SENPI_ROOT, file), target);
+    // Fixture must be pristine: prefer the managed .freeze-fix.bak (the pre-patch bytes) over the live, possibly patched file.
+    const bak = join(SENPI_ROOT, `${file}.freeze-fix.bak`);
+    copyFileSync(existsSync(bak) ? bak : join(SENPI_ROOT, file), target);
   }
   return root;
 }

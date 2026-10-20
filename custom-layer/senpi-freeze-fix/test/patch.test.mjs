@@ -30,6 +30,12 @@ const FILES = [
   "dist/bundle/chunks/session-worker.js",
 ];
 
+/** Pre-patch bytes: the managed .freeze-fix.bak when the live file is already patched. */
+function pristinePath(file) {
+  const bak = join(SENPI_ROOT, `${file}.freeze-fix.bak`);
+  return existsSync(bak) ? bak : join(SENPI_ROOT, file);
+}
+
 function installed() {
   return existsSync(join(SENPI_ROOT, "package.json"));
 }
@@ -44,7 +50,9 @@ function makeRoot(version) {
   for (const file of FILES) {
     const target = join(root, file);
     mkdirSync(dirname(target), { recursive: true });
-    copyFileSync(join(SENPI_ROOT, file), target);
+    // Fixture must be pristine: prefer the managed .freeze-fix.bak (the pre-patch bytes) over the live, possibly patched file.
+    const bak = join(SENPI_ROOT, `${file}.freeze-fix.bak`);
+    copyFileSync(existsSync(bak) ? bak : join(SENPI_ROOT, file), target);
   }
   return root;
 }
@@ -203,7 +211,7 @@ test("remove restores the pristine files", { skip: !installed() }, () => {
 test("every anchor occurs exactly once in the pristine copies", { skip: !installed() }, async () => {
   const targets = await buildTargets();
   for (const target of targets) {
-    const text = readFileSync(join(SENPI_ROOT, target.file), "utf8");
+    const text = readFileSync(pristinePath(target.file), "utf8");
     for (const edit of target.edits) {
       assert.equal(
         countOccurrences(text, edit.anchor),
@@ -226,7 +234,24 @@ test("the four targeted files are the four baselines", { skip: !installed() }, (
   const entry = baselines.versions["2026.10.19"];
   assert.deepEqual(Object.keys(entry.files).sort(), [...FILES].sort());
   for (const file of FILES) {
-    assert.equal(sha256File(join(SENPI_ROOT, file)), entry.files[file].pristine);
+    assert.equal(sha256File(pristinePath(file)), entry.files[file].pristine);
   }
 });
 
+
+test("every emitted embeddedPaths guard executes in its own bundle shape", async () => {
+  const targets = await buildTargets();
+  let checked = 0;
+  for (const target of targets) {
+    const edit = target.edits.find((e) => e.name === "embeddedPaths" && e.replacement.includes("flatMap("));
+    if (!edit || !/function embeddedPaths\(command\)\{/.test(edit.replacement)) continue;
+    const body = edit.replacement.replace(/let path\d+=$/, "return[\"ok\"]})} return embeddedPaths(command);");
+    assert.notEqual(body, edit.replacement, `no tail to replace in ${target.file}`);
+    const run = new Function("command", "EMBEDDED_PATH", body);
+    const rx = () => /(\/\/[a-z.]+)()/g;
+    assert.deepEqual(run("see https://github.com/x", rx()), [], target.file);
+    assert.deepEqual(run("cat //srv/share", rx()), ["ok"], target.file);
+    checked += 1;
+  }
+  assert.equal(checked, 2, "both bundled copies (chunk and session-worker) must be exercised");
+});

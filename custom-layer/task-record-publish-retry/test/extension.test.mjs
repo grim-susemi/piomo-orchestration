@@ -10,6 +10,8 @@ import { createRetryingRename } from "../extension.mjs";
 
 const SRC = "C:\\proj\\senpi-task\\tasks\\st_abc123.json.1.abcdef01.tmp";
 const DEST = "C:\\proj\\senpi-task\\tasks\\st_abc123.json";
+const SRC_B = "C:\\proj\\senpi-task\\tasks\\st_def456.json.1.abcdef02.tmp";
+const DEST_B = "C:\\proj\\senpi-task\\tasks\\st_def456.json";
 
 function codedError(code) {
   const error = new Error(code);
@@ -251,5 +253,46 @@ describe("circuit breaker (tight caller loops on a persistent lock)", () => {
     assert.ok(r.sleepStarts.length > sleepsBefore + 5);
     assert.ok(r.now() - start <= 1000);
     assert.equal(r.wrapped.state.tripped, 0);
+  });
+
+  it("an exhausted record does not suspend retries for another record", () => {
+    let t = 0;
+    const calls = { a: 0, b: 0 };
+    const rename = (src) => {
+      t += 30;
+      if (src === SRC) {
+        calls.a += 1;
+        throw codedError("EPERM");
+      }
+      calls.b += 1;
+      if (calls.b < 2) throw codedError("EPERM");
+      return undefined;
+    };
+    const wrapped = createRetryingRename({ rename, sleep: (ms) => { t += ms; }, now: () => t, log: () => {}, platform: "win32" });
+    assert.throws(() => wrapped(SRC, DEST), /EPERM/);
+    wrapped(SRC_B, DEST_B);
+    assert.equal(calls.b, 2);
+    assert.equal(wrapped.state.tripped, 0);
+  });
+
+  it("a success inside the cooldown clears that record so the next failure gets the full budget", () => {
+    let t = 0;
+    let failing = true;
+    let sleeps = 0;
+    const rename = () => {
+      t += 30;
+      if (failing) throw codedError("EPERM");
+      return undefined;
+    };
+    const wrapped = createRetryingRename({ rename, sleep: (ms) => { sleeps += 1; t += ms; }, now: () => t, log: () => {}, platform: "win32" });
+    assert.throws(() => wrapped(SRC, DEST), /EPERM/);
+    const sleepsAfterFirst = sleeps;
+    failing = false;
+    wrapped(SRC, DEST);
+    assert.equal(wrapped.state.tripped, 1);
+    failing = true;
+    assert.throws(() => wrapped(SRC, DEST), /EPERM/);
+    assert.ok(sleeps > sleepsAfterFirst + 5);
+    assert.equal(wrapped.state.tripped, 1);
   });
 });
