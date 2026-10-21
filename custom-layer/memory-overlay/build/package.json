@@ -1,0 +1,10 @@
+{
+  "name": "piomo-memory-rollback",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Private, version-pinned pre-merge application of the memory rollback fix",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}

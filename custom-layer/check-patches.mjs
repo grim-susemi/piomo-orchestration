@@ -9,10 +9,20 @@
 //
 // It never writes to a repository or to an installed file. `probe.mjs` copies senpi's
 // dist to a temp directory and deletes it, as documented in its own README.
-// It always exits 0 when the check ran; drift is reported, not thrown.
+// Without --strict it always exits 0 when the check ran; drift is reported, not thrown.
+//
+// --strict adds the update gate. PATCHES.md and the checker rows are compared in both
+// directions, every active extension/package entry of the agent is matched to a ledger row,
+// and the run ends with one verdict:
+//   exit 0  pass        every automated check is ok and nothing is left unverified
+//   exit 1  fail        missing/drifted/unreadable item, ledger mismatch, unledgered entry
+//   exit 3  incomplete  no failure, but something is unverified (source not pushed or not
+//                       committed, manual check, --only run). Unclear or untested never passes.
+// --json prints one JSON document instead of the text lines (exit 0 unless --strict).
+// Neither flag shows that an extension loads or behaves correctly in a new process.
 //
 // Usage:
-//   node custom-layer/check-patches.mjs [--only <name>] [--senpi-root <dir>] [--verbose]
+//   node custom-layer/check-patches.mjs [--only <name>] [--senpi-root <dir>] [--verbose] [--strict] [--json]
 
 import fs from "node:fs";
 import path from "node:path";
@@ -36,10 +46,22 @@ const SENPI =
   process.env.OMO_CHECK_SENPI_ROOT ||
   "C:/Users/USER/.bun/install/global/node_modules/@code-yeongyu/senpi";
 
+const LANE = process.env.OMO_CHECK_LANE_ROOT || "C:/Users/USER/.omo-stable-500";
+const HOME_OMO = process.env.OMO_CHECK_HOME_OMO || path.dirname(AGENT);
+const PR_WATCH =
+  process.env.OMO_CHECK_PR_WATCH ||
+  "C:/Users/USER/orca/projects/기타 작업/.omo/scripts/pr-watch.mjs";
+const LEDGER = path.join(HERE, "PATCHES.md");
+const SCOPE =
+  "installed bytes, patch state, source preservation, ledger and discovery; loading and behaviour in a new process are not checked";
+
 const ORCH = REPO;
 const COORD = "C:/Users/USER/orca/projects/piomo-agent-coordination-mod";
 const COMPACTION = "C:/Users/USER/orca/projects/omo-compaction-model";
 const EARLY = "C:/Users/USER/orca/projects/piomo-early-compaction-mod";
+const BRIEFING = "C:/Users/USER/orca/projects/piomo-briefing";
+const DASHBOARD = "C:/Users/USER/orca/projects/omo-herdr-dashboard";
+const ORACLE = "C:/Users/USER/orca/projects/piomo-oracle-advisor-mod";
 
 const FREEZE_FILES = [
   "dist/core/extensions/builtin/moved-path-guard/command-paths.js",
@@ -57,7 +79,11 @@ export function parseRevCount(text) {
   return { behind: Number(m[1]), ahead: Number(m[2]) };
 }
 
+export const STATES = Object.freeze(["tracked", "local-commit", "private", "external"]);
+
 export function classifyState({ hint, upstream, ahead } = {}) {
+  // Owner configuration and third-party copies have no repository of ours by design.
+  if (hint === "private" || hint === "external") return hint;
   if (hint === "local-commit") return "local-commit";
   if (!upstream) return "local-commit";
   if (typeof ahead !== "number") return "local-commit";
@@ -105,6 +131,200 @@ export function formatRow(row) {
   ];
   if (row.extras && row.extras.length) parts.push(...row.extras);
   return parts.join(" ");
+}
+
+/** Git's object id for these bytes (same as `git hash-object --no-filters`). */
+export function gitBlobId(buf) {
+  return crypto.createHash("sha1").update(`blob ${buf.length}\0`).update(buf).digest("hex");
+}
+
+/** One hash for a directory: sha256 over sorted `relative-path NUL sha256 LF` lines. */
+export function treeHash(dir) {
+  const files = [];
+  const walk = (abs, rel) => {
+    for (const name of fs.readdirSync(abs)) {
+      const child = path.join(abs, name);
+      const childRel = rel ? `${rel}/${name}` : name;
+      if (fs.statSync(child).isDirectory()) walk(child, childRel);
+      else files.push([childRel, sha256File(child)]);
+    }
+  };
+  walk(dir, "");
+  files.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  const hash = crypto.createHash("sha256");
+  for (const [rel, sum] of files) hash.update(`${rel}\0${sum}\n`);
+  return { files: files.length, hash: hash.digest("hex") };
+}
+
+/** Rows of every Markdown table whose header starts with `| name |`: id and state cell. */
+export function parseLedger(text) {
+  const rows = [];
+  let table = null; // null outside a table, false in another table, { state } in a ledger table
+  for (const line of String(text ?? "").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|")) {
+      table = null;
+      continue;
+    }
+    const cells = trimmed.replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim());
+    if (table === null) {
+      table = cells[0] === "name" ? { state: cells.indexOf("state") } : false;
+      continue;
+    }
+    if (!table || /^:?-{3,}:?$/.test(cells[0])) continue;
+    rows.push({ id: cells[0].replace(/`/g, ""), state: table.state >= 0 ? cells[table.state] ?? null : null });
+  }
+  return rows;
+}
+
+/** Both directions: ledger ids without a checker row, checker rows without a ledger id, state disagreements. */
+export function compareLedger(ledgerRows, checkerRows) {
+  const ids = ledgerRows.map((row) => row.id);
+  const ledger = new Map(ledgerRows.map((row) => [row.id, row.state]));
+  const checker = new Map(checkerRows.map((row) => [row.name, row.hint]));
+  return {
+    ids,
+    duplicates: ids.filter((id, index) => ids.indexOf(id) !== index),
+    missingFromChecker: ids.filter((id) => !checker.has(id)),
+    missingFromLedger: [...checker.keys()].filter((name) => !ledger.has(name)),
+    stateMismatch: [...ledger]
+      .filter(([id, state]) => checker.has(id) && checker.get(id) !== state)
+      .map(([id, state]) => ({ id, ledger: state, checker: checker.get(id) })),
+  };
+}
+
+/** Every launcher pin must name the installed version, and the overlay must be the pinned omo. */
+export function pinConsistency(pins, installed) {
+  const problems = [];
+  for (const pin of pins) {
+    for (const key of ["omo", "senpi"]) {
+      if (!pin[key] || pin[key] !== installed[key]) problems.push(`${pin.label}.${key}=${pin[key] ?? "missing"}`);
+    }
+  }
+  if (!installed.overlay || installed.overlay !== installed.omo) problems.push(`overlay=${installed.overlay ?? "missing"}`);
+  const versions = `omo=${installed.omo ?? "missing"} senpi=${installed.senpi ?? "missing"}`;
+  return problems.length
+    ? { status: "drift", actual: `${problems.join(",")} installed ${versions}` }
+    : { status: "ok", actual: versions };
+}
+
+const HOST_SHIM =
+  /^\/\/ Generated by OmO\. Delete this file to stop loading the default global extension\.\r?\nexport \{ default \} from "file:\/\/\/[^"]+\/@code-yeongyu\/senpi\/dist\/core\/extensions\/builtin\/([\w-]+)\.js";\s*$/;
+const EXTENSION_FILE = /\.(?:[cm]?js|ts)$/i;
+const EXTENSION_DIR_MARKERS = ["index.ts", "index.js", "index.mjs", "package.json"];
+
+function pathKey(entry) {
+  return path.resolve(entry).replace(/\\/g, "/").toLowerCase();
+}
+
+/**
+ * Active custom entries of an agent dir: files and extension directories under
+ * agent/extensions plus the settings.json `packages` and `extensions` paths. Each must be
+ * claimed by some row's `discover` list. Host-generated shims that only re-export a senpi
+ * builtin are recognised by their exact content; directories without an entry file are inert.
+ */
+export function discoverActive(agentDir, rows) {
+  const owners = new Map();
+  for (const row of rows) for (const entry of row.discover || []) owners.set(pathKey(entry), row.name);
+  const result = { entries: [], unledgered: [], missing: [], hostShims: [], inert: [], errors: [] };
+  const claim = (source, entry) => {
+    const owner = owners.get(pathKey(entry)) || null;
+    result.entries.push({ source, path: entry, owner });
+    if (!owner) result.unledgered.push(entry);
+  };
+
+  const extensionsDir = path.join(agentDir, "extensions");
+  let names = [];
+  try {
+    names = fs.readdirSync(extensionsDir).sort();
+  } catch (error) {
+    if (error.code !== "ENOENT") result.errors.push(`extensions dir unreadable (${error.code})`);
+  }
+  for (const name of names) {
+    const entry = path.join(extensionsDir, name);
+    try {
+      if (fs.statSync(entry).isDirectory()) {
+        if (EXTENSION_DIR_MARKERS.some((marker) => fs.existsSync(path.join(entry, marker)))) claim("extensions", entry);
+        else result.inert.push(entry);
+        continue;
+      }
+      if (!EXTENSION_FILE.test(name)) continue;
+      const shim = HOST_SHIM.exec(fs.readFileSync(entry, "utf8"));
+      if (shim && `${shim[1]}${path.extname(name)}` === name) result.hostShims.push(entry);
+      else claim("extensions", entry);
+    } catch (error) {
+      result.errors.push(`${entry} unreadable (${error.code || error.message})`);
+    }
+  }
+
+  let settings = {};
+  try {
+    settings = JSON.parse(fs.readFileSync(path.join(agentDir, "settings.json"), "utf8"));
+  } catch (error) {
+    result.errors.push(`settings.json unreadable (${error.code || "invalid JSON"})`);
+  }
+  for (const key of ["packages", "extensions"]) {
+    const list = settings?.[key] ?? [];
+    if (!Array.isArray(list)) {
+      result.errors.push(`settings.${key} is not a list`);
+      continue;
+    }
+    for (const item of list) {
+      if (typeof item !== "string") {
+        result.errors.push(`settings.${key} has an entry that is not a path`);
+        continue;
+      }
+      if (/^(?:npm|git|https?):/i.test(item)) {
+        claim(`settings.${key}`, item);
+        continue;
+      }
+      const entry = path.resolve(agentDir, item);
+      if (!fs.existsSync(entry)) result.missing.push(entry);
+      claim(`settings.${key}`, entry);
+    }
+  }
+  return result;
+}
+
+/** The --strict verdict. Failures win; anything unverified keeps the run from passing. */
+export function strictVerdict({ results = [], ledger = null, discovery = null, partial = false } = {}) {
+  const failures = [];
+  const unverified = [];
+  const warnings = [];
+  const dirty = new Set();
+  for (const row of results) {
+    if (row.sourceCheck !== "ok") failures.push(`${row.name}: source ${row.sourceCheck}`);
+    for (const item of row.installed || []) {
+      if (item.status !== "ok") failures.push(`${row.name}: ${item.status} ${item.label}`);
+    }
+    if (row.repo?.error) failures.push(`${row.name}: repository state unreadable`);
+    if (row.state === "local-commit") unverified.push(`${row.name}: source not on its remote (local-commit)`);
+    for (const reason of row.unverified || []) unverified.push(`${row.name}: ${reason}`);
+    for (const step of row.manual || []) unverified.push(`${row.name}: manual check - ${step}`);
+    if (row.repo?.dirty && !dirty.has(row.repo.path)) {
+      dirty.add(row.repo.path);
+      warnings.push(`${row.repo.name}: worktree has uncommitted changes (rows compare HEAD blobs)`);
+    }
+  }
+  const skipped = partial ? " (--only run)" : "";
+  if (!ledger) unverified.push(`ledger: not compared${skipped}`);
+  else if (ledger.error) failures.push(`ledger: ${ledger.error}`);
+  else {
+    for (const id of ledger.duplicates) failures.push(`ledger: duplicate row '${id}'`);
+    for (const id of ledger.missingFromChecker) failures.push(`ledger: '${id}' has no checker row`);
+    for (const id of ledger.missingFromLedger) failures.push(`ledger: checker row '${id}' is not in PATCHES.md`);
+    for (const m of ledger.stateMismatch) {
+      failures.push(`ledger: '${m.id}' is ${m.ledger} in PATCHES.md but ${m.checker} in the checker`);
+    }
+  }
+  if (!discovery) unverified.push(`discovery: not run${skipped}`);
+  else {
+    for (const entry of discovery.unledgered) failures.push(`discovery: active entry not in the ledger: ${entry}`);
+    for (const entry of discovery.missing) failures.push(`discovery: settings entry does not exist: ${entry}`);
+    for (const error of discovery.errors) failures.push(`discovery: ${error}`);
+  }
+  const verdict = failures.length ? "fail" : unverified.length ? "incomplete" : "pass";
+  return { verdict, exitCode: { pass: 0, fail: 1, incomplete: 3 }[verdict], failures, unverified, warnings };
 }
 
 // ---------------------------------------------------------------------------
@@ -205,6 +425,179 @@ function checkWorktree(file, expected) {
   return checkInstalled(file, expected);
 }
 
+// Owner configuration: presence and, for .json, parseability. Contents and hashes are never
+// reported; legitimate edits are expected between checks.
+function checkConfigFile(file) {
+  const item = { label: file, expected: "present", actual: "present", status: "ok" };
+  let text;
+  try {
+    text = fs.readFileSync(file, "utf8");
+  } catch {
+    return { ...item, status: "missing", actual: null };
+  }
+  if (!text.trim()) return { ...item, status: "drift", actual: "empty" };
+  if (file.endsWith(".json")) {
+    try {
+      JSON.parse(text.replace(/^\uFEFF/, ""));
+    } catch {
+      return { ...item, status: "drift", actual: "not valid JSON" };
+    }
+  }
+  return item;
+}
+
+function readVersion(root) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).version ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function checkPins(pins, opts) {
+  const item = { label: "pin-consistency", expected: "launcher pins = installed omo-ai, senpi and overlay versions" };
+  const values = [];
+  for (const pin of pins) {
+    let text;
+    try {
+      text = fs.readFileSync(pin.file, "utf8");
+    } catch {
+      return { ...item, status: "missing", actual: `${pin.label} unreadable` };
+    }
+    if (pin.json) {
+      let data = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        // reported below as a missing pin
+      }
+      values.push({ label: pin.label, omo: data.omo ?? null, senpi: data.senpi ?? null });
+    } else {
+      values.push({ label: pin.label, omo: pin.omo.exec(text)?.[1] ?? null, senpi: pin.senpi.exec(text)?.[1] ?? null });
+    }
+  }
+  const installed = { omo: readVersion(GLOBAL_OMO), senpi: readVersion(opts.senpiRoot), overlay: readVersion(OVERLAY) };
+  return { ...item, ...pinConsistency(values, installed) };
+}
+
+// A generation-installed product: the shim points into <product>/integration/generation-N,
+// current.json names the same generation, its recorded per-file hashes match, and the
+// installed entry's bytes (raw, or CRLF normalised to LF) exist in the source remote's history.
+function checkIntegration(row, opts, out) {
+  const { shim, product, current } = row.integration;
+  const extensionsDir = path.join(opts.agentDir, "extensions");
+  const shimPath = path.join(extensionsDir, shim);
+  const integrationRoot = path.join(opts.agentDir, product, "integration");
+  let target = null;
+  try {
+    const m = /export \{ default \} from ['"](\.\.\/[^'"]+)['"]/.exec(fs.readFileSync(shimPath, "utf8"));
+    if (m) target = path.resolve(extensionsDir, m[1]);
+  } catch {
+    out.installed.push({ status: "missing", label: shimPath, actual: null, expected: "managed shim" });
+    return;
+  }
+  const parts = target ? path.relative(integrationRoot, target).split(path.sep) : [];
+  const generation = /^generation-\d{6}$/.test(parts[0] || "") ? parts[0] : null;
+  out.installed.push({
+    status: generation ? "ok" : "drift",
+    label: shimPath,
+    actual: target,
+    expected: `${integrationRoot}/generation-NNNNNN/...`,
+  });
+  if (!generation) return;
+  out.extras.push(`generation=${generation}`);
+  const genDir = path.join(integrationRoot, generation);
+  const entry = parts.slice(1).join("/");
+
+  const recordPath = path.join(opts.agentDir, current);
+  let record = null;
+  try {
+    record = JSON.parse(fs.readFileSync(recordPath, "utf8"));
+  } catch {
+    // reported as missing below
+  }
+  out.installed.push({
+    status: !record ? "missing" : record.generation === generation ? "ok" : "drift",
+    label: recordPath,
+    actual: record?.generation ?? null,
+    expected: generation,
+  });
+  out.installed.push({
+    status: fs.existsSync(target) ? "ok" : "missing",
+    label: target,
+    actual: null,
+    expected: "entry file",
+  });
+
+  const hashes = record?.generation === generation && record.sha256 && typeof record.sha256 === "object"
+    ? Object.entries(record.sha256)
+    : [];
+  if (hashes.length) {
+    const bad = hashes.filter(([file, expected]) => {
+      try {
+        return sha256File(path.join(genDir, file.replace(/\\/g, "/"))) !== expected;
+      } catch {
+        return true;
+      }
+    });
+    out.installed.push({
+      status: bad.length ? "drift" : "ok",
+      label: `${genDir} recorded hashes`,
+      actual: bad.length
+        ? `${bad.length}/${hashes.length} differ or missing: ${bad.slice(0, 3).map(([file]) => file).join(", ")}`
+        : `${hashes.length}/${hashes.length} match`,
+      expected: `${hashes.length} recorded hashes`,
+    });
+  } else {
+    out.unverified.push(`${generation} has no recorded file hashes; only the entry file's presence was checked`);
+  }
+
+  const upstream = out.repo?.upstream;
+  if (!upstream || !fs.existsSync(target)) {
+    out.unverified.push("installed entry not traced to a source commit (no upstream or no entry)");
+    return;
+  }
+  const raw = fs.readFileSync(target);
+  const lf = Buffer.from(raw.toString("latin1").replace(/\r\n/g, "\n"), "latin1");
+  for (const [form, bytes] of [["", raw], ["(lf)", lf]]) {
+    if (form && bytes.equals(raw)) continue;
+    let commit = "";
+    try {
+      commit = git(["log", "-1", "--format=%H", `--find-object=${gitBlobId(bytes)}`, upstream], { cwd: row.repoPath }).trim();
+    } catch {
+      // treated as not found
+    }
+    if (commit) {
+      out.extras.push(`entry-source=${upstream}@${commit.slice(0, 7)}${form}`);
+      return;
+    }
+  }
+  out.unverified.push(`installed entry ${entry} not found in ${upstream} history (unpushed or built differently)`);
+}
+
+/** Repository paths whose uncommitted changes mean the row's next source is not preserved yet. */
+function rowSourcePaths(row) {
+  if (row.sourcePaths) return row.sourcePaths;
+  if (row.repoPath === ORCH && row.location.startsWith("custom-layer/")) return [row.location];
+  return [...new Set([
+    ...(row.sourceBlobs || []).map((blob) => blob.path),
+    ...(row.trackedFiles || []),
+    ...(row.sourceText || []).map((text) => text.path),
+  ])];
+}
+
+function readLedger(rows) {
+  let text;
+  try {
+    text = fs.readFileSync(LEDGER, "utf8");
+  } catch (error) {
+    return { path: LEDGER, error: `PATCHES.md unreadable (${error.code || error.message})` };
+  }
+  const parsed = parseLedger(text);
+  if (!parsed.length) return { path: LEDGER, error: "no ledger table in PATCHES.md" };
+  return { path: LEDGER, ...compareLedger(parsed, rows) };
+}
+
 function runJsonLine(command, args, prefix, timeout = 60000) {
   try {
     const out = execFileSync(command, args, {
@@ -237,8 +630,16 @@ export function makeRows() {
         "omo-memory-doctor.diff",
         "omo-memory-memfs.diff",
         "PROVENANCE.md",
+        "build/src/stage.mjs",
+        "build/src/bundle-patch.mjs",
+        "build/src/gate.mjs",
+        "build/test-captured/native-scenarios.mjs",
+        "build/test-captured/memory-fixture.mjs",
       ],
-      capturedExpected: { "omo.js": "4a8aef923825ccd5fbb5ab6d4b3b72e0ae145b670309f1db3ead53827c029476" },
+      capturedExpected: {
+        "omo.js": "4a8aef923825ccd5fbb5ab6d4b3b72e0ae145b670309f1db3ead53827c029476",
+        "build/src/gate.mjs": "5c74e89b8b47f9108d5a974f3b41960ff7c3896d25cc46d8d8663b188a02479c",
+      },
       installed: [
         { path: `${OVERLAY}/plugin/extensions/omo.js`, expected: "4a8aef923825ccd5fbb5ab6d4b3b72e0ae145b670309f1db3ead53827c029476" },
         { path: `${OVERLAY}/plugin/extensions/omo-memory-doctor.js`, expected: "1f4758613c914142864b12cc985213c0aeb4f79e933f12402b61b5ad9aa79b16" },
@@ -250,6 +651,7 @@ export function makeRows() {
       hint: "tracked",
       location: "dist/extension.js+scripts/build-adapter.mjs",
       repoPath: COORD,
+      discover: [`${AGENT}/packages/piomo-agent-coordination-mod`],
       sourceBlobs: [
         { path: "dist/extension.js", expected: "1a717c64505adfacb484e4906bead927c4d0975598f1c1928e695f2b6174233f" },
       ],
@@ -268,6 +670,7 @@ export function makeRows() {
       hint: "tracked",
       location: "custom-layer/task-record-publish-retry/extension.mjs",
       repoPath: ORCH,
+      discover: [`${AGENT}/extensions/omo-task-record-publish-retry.js`],
       sourceBlobs: [
         {
           path: "custom-layer/task-record-publish-retry/extension.mjs",
@@ -300,6 +703,7 @@ export function makeRows() {
       hint: "tracked",
       location: "custom-layer/settings-guard/extension.mjs",
       repoPath: ORCH,
+      discover: [`${AGENT}/extensions/omo-settings-guard.js`],
       sourceBlobs: [
         { path: "custom-layer/settings-guard/extension.mjs", expected: "1f9e27da404a9cc781b0666eeeae241cacd6af1664e53b5eb1fb6660e4f1d5c1" },
       ],
@@ -312,6 +716,7 @@ export function makeRows() {
       hint: "tracked",
       location: "custom-layer/task-no-fallback-pkg",
       repoPath: ORCH,
+      discover: [`${AGENT}/task-no-fallback-pkg`],
       sourceBlobs: [
         { path: "custom-layer/task-no-fallback-pkg/omo-task-no-fallback.js", expected: "38c425f04338441641980f6e8d3fa1993728072a2cf8cc1b6700f91e935de505" },
         { path: "custom-layer/task-no-fallback-pkg/package.json", expected: "1a14d2903c4174e5ca54becded10e7d99d74e97163e2c84e25d53cf191f39119" },
@@ -326,6 +731,7 @@ export function makeRows() {
       hint: "tracked",
       location: "custom-layer/herdr-agent-sidebar-repair/herdr-senpi.mjs",
       repoPath: ORCH,
+      discover: ["C:/Users/USER/orca/projects/herdr-agent-sidebar-diagnosis/repair/herdr-senpi.mjs"],
       sourceBlobs: [
         { path: "custom-layer/herdr-agent-sidebar-repair/herdr-senpi.mjs", expected: "7eeb9a5fd9b3b169ef4de375b1d5443445f4666205445989afc62d760a27fdcd" },
       ],
@@ -338,6 +744,7 @@ export function makeRows() {
       hint: "tracked",
       location: "src/omo-compaction-model.ts",
       repoPath: COMPACTION,
+      discover: [`${AGENT}/extensions/omo-compaction-model.ts`],
       sourceBlobs: [
         { path: "src/omo-compaction-model.ts", expected: "f5bbe48a2b30afc3f3303365ad4b98717f344343c8e540ff8080826ead48fb48" },
       ],
@@ -350,6 +757,7 @@ export function makeRows() {
       hint: "tracked",
       location: "src/extension.ts+bun-run-build",
       repoPath: EARLY,
+      discover: [`${AGENT}/extensions/early-compaction.js`],
       trackedFiles: ["src/extension.ts", "scripts/mod.mjs"],
       sourceText: [
         { path: "package.json", contains: "bun build src/extension.ts --outfile dist/early-compaction.js" },
@@ -373,6 +781,120 @@ export function makeRows() {
       freeze: true,
       installed: [],
     },
+    // Rows below are not package patches. They are the other active custom items an update
+    // must keep: generation-installed products, a third-party copy, owner configuration,
+    // the launcher and the skill's script. `manual` lists what no automated check covers.
+    {
+      name: "omo-briefing",
+      kind: "integration",
+      hint: "tracked",
+      location: "piomo-briefing (generation install)",
+      repoPath: BRIEFING,
+      sourcePaths: ["."],
+      integration: { shim: "omo-briefing.js", product: "briefing", current: "briefing/current.json" },
+      discover: [`${AGENT}/extensions/omo-briefing.js`],
+      manual: ["a new process registers the brief tools; the board page renders and a board answer reaches the session"],
+      installed: [],
+    },
+    {
+      name: "omo-herdr-dashboard",
+      kind: "integration",
+      hint: "tracked",
+      location: "omo-herdr-dashboard (generation install)",
+      repoPath: DASHBOARD,
+      sourcePaths: ["."],
+      integration: {
+        shim: "omo-herdr-dashboard.js",
+        product: "herdr-dashboard",
+        current: "herdr-dashboard/integration/current.json",
+      },
+      discover: [`${AGENT}/extensions/omo-herdr-dashboard.js`],
+      manual: ["a new process loads the dashboard; todo/worker/DAG state shows in an owned test pane"],
+      installed: [],
+    },
+    {
+      name: "omo-oracle-advisor",
+      kind: "integration",
+      hint: "tracked",
+      location: "oracle-advisor-mod (generation install)",
+      repoPath: ORACLE,
+      sourcePaths: ["."],
+      integration: { shim: "omo-oracle-advisor.js", product: "oracle-advisor", current: "oracle-advisor/current.json" },
+      discover: [`${AGENT}/extensions/omo-oracle-advisor.js`],
+      manual: ["a new process registers the four oracle tools without a load error"],
+      installed: [],
+    },
+    {
+      name: "cli-anything",
+      kind: "external",
+      hint: "external",
+      location: "agent/extensions/cli-anything (third-party copy)",
+      tree: { path: `${AGENT}/extensions/cli-anything`, expected: "842736d063d6a1f678fb0e78895120add5f8c3a01e943b4ae6f97db6542bffb4" },
+      discover: [`${AGENT}/extensions/cli-anything`],
+      unverified: ["origin not recorded (upstream repository, version and licence of this copy are unknown)"],
+      manual: ["a new process registers the /cli-anything commands (index.ts imports @mariozechner/pi-coding-agent types)"],
+      installed: [],
+    },
+    {
+      name: "user-config-selection",
+      kind: "private",
+      hint: "private",
+      location: "owner configuration (kept in place, never copied)",
+      configFiles: [
+        `${HOME_OMO}/omo.jsonc`,
+        `${HOME_OMO}/config.jsonc`,
+        `${HOME_OMO}/native-profile-selection.json`,
+        `${HOME_OMO}/memory-model-selection.json`,
+        `${AGENT}/settings.json`,
+        `${AGENT}/models.json`,
+        `${AGENT}/models.yml`,
+        `${AGENT}/models-store.json`,
+        `${AGENT}/native-profile-selection.json`,
+        `${AGENT}/mcp.json`,
+        `${AGENT}/trust.json`,
+      ],
+      manual: [
+        "compare model, provider, thinking, profile and role selections with the pre-update inventory by safe per-field identities",
+      ],
+      installed: [],
+    },
+    {
+      name: "stable-500-launcher",
+      kind: "launcher",
+      hint: "tracked",
+      location: "custom-layer/stable-500-launcher",
+      repoPath: ORCH,
+      captured: ["omo.cmd", "omo-memory-selector-entry-r21.mjs", "manifest.json", "README.md"],
+      capturedExpected: {
+        "omo.cmd": "3dfa490f26846fa4672478f1401722cd1015098c78bd6edb55c96116efbb6caa",
+        "omo-memory-selector-entry-r21.mjs": "fccd1841b044aa908121c784a536f66fc74ee9535aa162f2731e50b35c6aeff7",
+        "manifest.json": "15177e17f64e9a7f8bdcc5abaf3d8aacfc6a6a39d01bf7894ac4039221d7a177",
+      },
+      installed: [
+        { path: `${LANE}/omo.cmd`, expected: "3dfa490f26846fa4672478f1401722cd1015098c78bd6edb55c96116efbb6caa" },
+        { path: `${LANE}/staging/omo-memory-selector-entry-r21.mjs`, expected: "fccd1841b044aa908121c784a536f66fc74ee9535aa162f2731e50b35c6aeff7" },
+        { path: `${LANE}/staging/memory-rollback-5.1.38-r1/gate.mjs`, expected: "5c74e89b8b47f9108d5a974f3b41960ff7c3896d25cc46d8d8663b188a02479c" },
+        { path: `${LANE}/staging/memory-rollback-5.1.38-r1/manifest.json`, expected: "15177e17f64e9a7f8bdcc5abaf3d8aacfc6a6a39d01bf7894ac4039221d7a177" },
+      ],
+      pins: [
+        { label: "omo.cmd", file: `${LANE}/omo.cmd`, omo: /^set "OMO_STABLE_PINNED_OMO=([^"]+)"/m, senpi: /^set "OMO_STABLE_PINNED_SENPI=([^"]+)"/m },
+        { label: "reentry", file: `${LANE}/staging/omo-memory-selector-entry-r21.mjs`, omo: /^const PINNED_OMO = "([^"]+)"/m, senpi: /^const PINNED_SENPI = "([^"]+)"/m },
+        { label: "manifest", file: `${LANE}/staging/memory-rollback-5.1.38-r1/manifest.json`, json: true },
+      ],
+      manual: ["after an approved update, launch probes through omo.cmd and the reentry select the intended home and plugin"],
+    },
+    {
+      name: "pr-watch-script",
+      kind: "tool",
+      hint: "tracked",
+      location: "scripts/pr-watch.mjs",
+      repoPath: ORCH,
+      sourceBlobs: [{ path: "scripts/pr-watch.mjs", expected: "a0e54106076801cf01cb097c63ac4a03a7de72b236d6acbf25de699bbeb271ef" }],
+      installed: [{ path: PR_WATCH, expected: "873db7565bec4f4e3cefe20f45609ab10aee20afcb45da397c50545fffd6e4bd" }],
+      manual: [
+        "the published copy is a sanitized port (machine paths replaced); its behaviour has not been compared with the copy the omo-check skill runs",
+      ],
+    },
   ];
 }
 
@@ -382,12 +904,15 @@ export function makeRows() {
 function evaluateRow(row, opts) {
   const out = {
     name: row.name,
+    kind: row.kind || "patch",
     location: row.location,
-    state: "local-commit",
+    state: classifyState({ hint: row.hint }),
     repo: null,
     installed: [],
-    extras: [],
+    extras: row.kind ? [`kind=${row.kind}`] : [],
     sourceCheck: "ok",
+    unverified: [...(row.unverified || [])],
+    manual: [...(row.manual || [])],
   };
 
   if (row.repoPath) {
@@ -466,11 +991,57 @@ function evaluateRow(row, opts) {
     if (opts.verbose) out.extras.push(`source:${path.basename(file)}=${ok ? "ok" : "missing"}`);
   }
 
+  // Rows compare HEAD blobs; uncommitted edits under the row's source mean the next
+  // version of the source is not preserved yet.
+  if (row.repoPath && out.repo && !out.repo.error) {
+    const paths = rowSourcePaths(row);
+    if (paths.length) {
+      try {
+        const changed = git(["status", "--porcelain", "--untracked-files=all", "--", ...paths], { cwd: row.repoPath })
+          .split(/\r?\n/)
+          .filter(Boolean);
+        if (changed.length) {
+          out.extras.push(`worktree=modified(${changed.length})`);
+          out.unverified.push(`${changed.length} uncommitted source change(s) under ${paths.join(", ")}`);
+        }
+      } catch {
+        sourceStatuses.push("error");
+      }
+    }
+  }
+
   out.sourceCheck = sourceStatuses.length ? aggregate(sourceStatuses) : "ok";
 
-  for (const file of row.installed) {
+  for (const file of row.installed || []) {
     out.installed.push(checkInstalled(file.path, file.expected));
   }
+
+  if (row.integration) checkIntegration(row, opts, out);
+
+  if (row.tree) {
+    let actual = null;
+    try {
+      actual = treeHash(row.tree.path);
+    } catch {
+      // reported as missing
+    }
+    out.installed.push({
+      status: !actual ? "missing" : actual.hash === row.tree.expected ? "ok" : "drift",
+      label: `${row.tree.path} (tree)`,
+      actual: actual ? `${actual.hash} (${actual.files} files)` : null,
+      expected: row.tree.expected,
+    });
+  }
+
+  for (const file of row.configFiles || []) out.installed.push(checkConfigFile(file));
+
+  if (row.pins) {
+    const pins = checkPins(row.pins, opts);
+    out.installed.push(pins);
+    out.extras.push(`pins=${pins.status === "ok" ? pins.actual.replace(/ /g, ",") : "mismatch"}`);
+  }
+
+  if (out.manual.length) out.extras.push(`manual=${out.manual.length}`);
 
   if (row.name === "task-record-publish-retry" && out.installed[0]) {
     const actual = out.installed[0].actual;
@@ -534,12 +1105,14 @@ function summarizePatchCheck(check) {
 // CLI
 
 function parseArgs(argv) {
-  const opts = { only: null, verbose: false, senpiRoot: SENPI };
+  const opts = { only: null, verbose: false, strict: false, json: false, senpiRoot: SENPI, agentDir: AGENT };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--only") opts.only = argv[++i];
     else if (arg === "--verbose" || arg === "-v") opts.verbose = true;
     else if (arg === "--senpi-root") opts.senpiRoot = argv[++i];
+    else if (arg === "--strict") opts.strict = true;
+    else if (arg === "--json") opts.json = true;
     else if (arg === "--help" || arg === "-h") opts.help = true;
     else throw new Error(`unknown argument: ${arg}`);
   }
@@ -556,7 +1129,9 @@ export function main(argv = process.argv.slice(2)) {
   }
 
   if (opts.help) {
-    console.log("usage: node custom-layer/check-patches.mjs [--only <name>] [--senpi-root <dir>] [--verbose]");
+    console.log(
+      "usage: node custom-layer/check-patches.mjs [--only <name>] [--senpi-root <dir>] [--verbose] [--strict] [--json]",
+    );
     return 0;
   }
 
@@ -584,17 +1159,72 @@ export function main(argv = process.argv.slice(2)) {
     }
   }
 
-  for (const result of results) console.log(formatRow(result));
+  const count = (state) => results.filter((r) => r.state === state).length;
+  const summary = {
+    patches: results.length,
+    tracked: count("tracked"),
+    localCommit: count("local-commit"),
+    private: count("private"),
+    external: count("external"),
+    drift: results.filter(
+      (r) => r.sourceCheck !== "ok" || aggregate(r.installed.map((f) => f.status)) !== "ok",
+    ).length,
+    manual: results.reduce((n, r) => n + (r.manual?.length || 0), 0),
+  };
 
-  const tracked = results.filter((r) => r.state === "tracked").length;
-  const local = results.filter((r) => r.state === "local-commit").length;
-  const drift = results.filter(
-    (r) => r.sourceCheck !== "ok" || aggregate(r.installed.map((f) => f.status)) !== "ok",
-  ).length;
+  // Ledger and discovery are whole-inventory checks; an --only run cannot pass them.
+  const gate = opts.strict || opts.json;
+  const ledger = gate && !opts.only ? readLedger(rows) : null;
+  const discovery = gate && !opts.only ? discoverActive(opts.agentDir, rows) : null;
+  const verdict = strictVerdict({ results, ledger, discovery, partial: Boolean(opts.only) });
+
+  if (opts.json) {
+    const doc = {
+      schema: "omo-check-patches/1",
+      checkedAt: new Date().toISOString(),
+      options: { only: opts.only, strict: opts.strict, agentDir: opts.agentDir, senpiRoot: opts.senpiRoot },
+      scope: SCOPE,
+      summary,
+      rows: results,
+      ledger,
+      discovery,
+      verdict,
+    };
+    console.log(JSON.stringify(doc, null, 2));
+    return opts.strict ? verdict.exitCode : 0;
+  }
+
+  for (const result of results) console.log(formatRow(result));
   console.log(
-    `SUMMARY patches=${results.length} tracked=${tracked} local-commit=${local} untracked=0 drift=${drift}`,
+    `SUMMARY patches=${summary.patches} tracked=${summary.tracked} local-commit=${summary.localCommit} untracked=0 ` +
+      `drift=${summary.drift} private=${summary.private} external=${summary.external} manual=${summary.manual}`,
   );
-  return 0;
+  if (!opts.strict) return 0;
+
+  if (ledger) {
+    console.log(
+      ledger.error
+        ? `LEDGER error=${ledger.error}`
+        : `LEDGER rows=${ledger.ids.length} missing-from-checker=${ledger.missingFromChecker.length} ` +
+            `missing-from-ledger=${ledger.missingFromLedger.length} state-mismatch=${ledger.stateMismatch.length}`,
+    );
+  }
+  if (discovery) {
+    console.log(
+      `DISCOVERY entries=${discovery.entries.length} unledgered=${discovery.unledgered.length} ` +
+        `missing=${discovery.missing.length} host-shims=${discovery.hostShims.length} inert=${discovery.inert.length} ` +
+        `errors=${discovery.errors.length}`,
+    );
+  }
+  for (const line of verdict.failures) console.log(`FAIL ${line}`);
+  for (const line of verdict.unverified) console.log(`UNVERIFIED ${line}`);
+  for (const line of verdict.warnings) console.log(`WARN ${line}`);
+  console.log(`SCOPE ${SCOPE}`);
+  console.log(
+    `STRICT verdict=${verdict.verdict} exit=${verdict.exitCode} failures=${verdict.failures.length} ` +
+      `unverified=${verdict.unverified.length} warnings=${verdict.warnings.length}`,
+  );
+  return verdict.exitCode;
 }
 
 const invoked = process.argv[1] ? path.resolve(process.argv[1]) : null;

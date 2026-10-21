@@ -1,7 +1,10 @@
 # Custom patch ledger
 
-One row per custom patch running on this machine. Plan: `.omo/plans/research-session-freeze-fix.md`
-(todo 7, D10, IS-7, SC9).
+One row per custom item an update on this machine must keep: the package patches first, then the
+generation-installed products, a third-party copy, owner configuration, the launcher and the
+omo-check script. This is the single human-edited ledger; per-item update rules live in
+[`UPDATE-RULES.ko.md`](UPDATE-RULES.ko.md) keyed by these names, and no other list repeats the rows.
+Plan: `.omo/plans/research-session-freeze-fix.md` (todo 7, D10, IS-7, SC9).
 
 States:
 
@@ -11,7 +14,12 @@ States:
   (an uncommitted working-tree change, or a capture waiting for the lead's `work/freeze-fix`
   commit). This is the pre-push state allowed by decision 2 of the plan.
 
-`untracked` is not a valid state here: every row has a git home or a captured copy in
+- `private` - owner configuration kept in place on this machine. Never copied into a repository;
+  the checker reports presence and JSON validity only, never contents.
+- `external` - a third-party copy we do not own. The row records what is installed; its origin
+  must be recorded before `--strict` stops reporting it as unverified.
+
+`untracked` is not a valid state here: every owned row has a git home or a captured copy in
 `custom-layer/`.
 
 Check all rows:
@@ -20,16 +28,25 @@ Check all rows:
 cd C:/Users/USER/orca/projects/piomo-orchestration-source
 node custom-layer/check-patches.mjs               # all rows
 node custom-layer/check-patches.mjs --only <name> # one row
+node custom-layer/check-patches.mjs --strict      # update gate, exit 0 pass / 1 fail / 3 incomplete
+node custom-layer/check-patches.mjs --strict --json > <evidence>/check.json   # same, one JSON document
 ```
 
-The checker is read-only and always exits 0; it reports drift instead of failing. For the
+The checker is read-only. Without `--strict` it always exits 0; it reports drift instead of failing.
+`--strict` also compares this table with the checker rows in both directions (missing row,
+extra row, state disagreement) and matches every file or extension directory in
+`<agent>/extensions` and every `settings.json` `packages`/`extensions` path to a row. A missing,
+drifted or unreadable item, a ledger mismatch or an unledgered entry fails (exit 1). Anything
+unverified - source not committed or not pushed, an unrecorded origin, a manual check, an
+`--only` run - leaves the run incomplete (exit 3). Neither mode shows that an extension loads or
+behaves correctly in a new process; that is a separate acceptance step of every update. For the
 `piomo-orchestration-source` rows it compares the installed file with the **HEAD blob**
 (`git show HEAD:<path>`), not the worktree file: `core.autocrlf=true` makes worktree hashes
 differ by line endings while the committed blob is the live byte sequence.
 
 | name | target files | source location (repo path, remote URL, commit) | state | how applied | check command | upstream link/status | retire condition |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| memory-overlay | `C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.38-r1/package/plugin/extensions/omo.js`<br>`.../omo-memory-doctor.js`<br>`.../omo-memory-memfs.js` | `custom-layer/memory-overlay/` (captured: `omo.js` byte copy + two diffs + `PROVENANCE.md`)<br>build project `C:/Users/USER/orca/projects/piomo-memory-rollback-5.1.38` (no `.git`)<br>remote https://github.com/grim-susemi/piomo-orchestration.git<br>commit pending (`work/freeze-fix`; base `e2c29417ddfc810d8ff220f225f0fa6ff8eb2765`) | tracked | Immutable generation selected by `omo.cmd`/reentry; no in-place edit of the global package. Rebuild with `src/stage.mjs`, validate with `test/native-scenarios.mjs`. | `node custom-layer/check-patches.mjs --only memory-overlay` | PR https://github.com/code-yeongyu/oh-my-openagent/pull/10000 - OPEN; head `4406c7776ca6582cc206819fadc1b34a060d4729`; stock 5.1.38 lacks the fix | Stock omo-ai at the pinned version matches all three overlay hashes, or the PR merges and the pinned stock contains the fix; baseline/patched native scenarios pass on stock |
+| memory-overlay | `C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.38-r1/package/plugin/extensions/omo.js`<br>`.../omo-memory-doctor.js`<br>`.../omo-memory-memfs.js` | `custom-layer/memory-overlay/` (captured: `omo.js` byte copy + two diffs + `PROVENANCE.md`; build and test inputs under `build/`, captured 2026-10-21)<br>build project `C:/Users/USER/orca/projects/piomo-memory-rollback-5.1.38` (no `.git`)<br>remote https://github.com/grim-susemi/piomo-orchestration.git<br>commit pending (`work/freeze-fix`; base `e2c29417ddfc810d8ff220f225f0fa6ff8eb2765`) | tracked | Immutable generation selected by `omo.cmd`/reentry; no in-place edit of the global package. Rebuild with `src/stage.mjs`, validate with `test/native-scenarios.mjs`. | `node custom-layer/check-patches.mjs --only memory-overlay` | PR https://github.com/code-yeongyu/oh-my-openagent/pull/10000 - OPEN (re-checked 2026-10-21, `merged_at` null); overlay derived from head `4406c7776ca6582cc206819fadc1b34a060d4729`, current head `dd86ddb7f9fd919ed4921bca2668c0016be7817e`; stock 5.1.38 and 5.1.40 lack the fix | Stock omo-ai at the pinned version matches all three overlay hashes, or the PR merges and the pinned stock contains the fix; baseline/patched native scenarios pass on stock |
 | coordination-adapters | `C:/Users/USER/.omo-stable-500/home/.omo/agent/packages/piomo-agent-coordination-mod/dist/extension.js`<br>`C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.38-r1/package/plugin/extensions/omo-task.js`<br>`C:/Users/USER/.bun/install/global/node_modules/omo-ai/plugin/extensions/omo-task.js` | repo `C:/Users/USER/orca/projects/piomo-agent-coordination-mod`<br>path `dist/extension.js`; adapter generated by tracked `scripts/build-adapter.mjs` (pin `src/engine-bridge.ts`)<br>remote https://github.com/grim-susemi/omo-agent-coordination.git<br>commit `70041cfa54a50d920e751029986bc8b878517439`<br>The staging overlay has no `plugin/packages/`; the live package is the agent-profile copy above. | tracked | Mode: `settings.packages` path. Adapter: `build-adapter.mjs` turns stock `omo-task.js` (`36d98c7a...`, 1,100,451 B) into candidate `2b559bb1...`; copied over both targets by the hash-guarded `apply-live-install.mjs` (backups `omo-task.js.5138-baseline-{overlay,global}`). Scripts in `.omo/evidence/agent-coordination/attempt-5138-rebuild-e1/live-install/` (gitignored, reproducible from the tracked builder). | `node custom-layer/check-patches.mjs --only coordination-adapters` | Custom mode; no upstream PR. Adapter is a local native carrier for `omo-task.js`; baseline pin `36d98c7ab3cc07349b60adc8bc7365a85e7573653ebab574d0114c2571d53dcd`; not filed | The coordination mode is retired, or senpi/omo-ai exposes the owner-engine/outcome ports natively so no adapter is needed; then restore both `omo-task.js` copies to stock and re-run the mode's QA |
 | task-record-publish-retry | `C:/Users/USER/.omo-stable-500/home/.omo/agent/task-record-publish-retry/extension.mjs`<br>`.../agent/extensions/omo-task-record-publish-retry.js` (wrapper) | `custom-layer/task-record-publish-retry/extension.mjs` in `piomo-orchestration-source`<br>remote https://github.com/grim-susemi/piomo-orchestration.git<br>commit pending (`work/freeze-fix`); installed bytes are the old HEAD version `6264d44e49cae147569237ba5e200a8f41c7ab517cda03b64f8f7839e72cd2c7`; D9 source with the circuit breaker (2026-10-20, after the live DAG window showed 18 compounding 1 s blocks) is now per destination record, `89a2218f03f0cc16389af5d54112f73428edd98f34083f75b0ec7b28eecdb08d` (F1 found the first global breaker, `e7e232d846224ec27703f0b013e4ff7d59076c4ae1d307efa178148acb9631a9`, suspended retries for unrelated records); the no-breaker D9 build `4000be68adc43821153f3555b29433bd96a11d9fa328c6ff19fa0e3dc0f5a1a5` was installed briefly | tracked | Byte copy + wrapper export; D9 version installed by todo 8 with a backup of the old file | `node custom-layer/check-patches.mjs --only task-record-publish-retry` | Upstream omo-ai `omo-task.js` writes task records with tmp + `renameSync` and has no EPERM/EBUSY/EACCES retry; not filed (draft todo 6) | Upstream retries the task-record rename within a bounded budget; verify by finding the retry in the installed `omo-task.js` before removing the wrapper |
 | settings-guard | `C:/Users/USER/.omo-stable-500/home/.omo/agent/settings-guard/extension.mjs`<br>`.../agent/settings-guard/last-good.json` (runtime state)<br>`.../agent/extensions/omo-settings-guard.js` (wrapper) | `custom-layer/settings-guard/extension.mjs` in `piomo-orchestration-source`<br>remote https://github.com/grim-susemi/piomo-orchestration.git<br>commit `e2c29417ddfc810d8ff220f225f0fa6ff8eb2765` (HEAD blob `1f9e27da404a9cc781b0666eeeae241cacd6af1664e53b5eb1fb6660e4f1d5c1`) | tracked | Byte copy + wrapper export; alert only (owner choice 2026-10-17) | `node custom-layer/check-patches.mjs --only settings-guard` | None; local guard. Not filed | Senpi no longer treats a missing/empty `settings.json` as `{}` or no longer clobbers protected keys; or the owner retires the guard |
@@ -38,20 +55,50 @@ differ by line endings while the committed blob is the live byte sequence.
 | omo-compaction-model | `C:/Users/USER/.omo-stable-500/home/.omo/agent/extensions/omo-compaction-model.ts` | repo `C:/Users/USER/orca/projects/omo-compaction-model`<br>path `src/omo-compaction-model.ts`<br>remote https://github.com/grim-susemi/omo-compaction-model.git<br>commit `f86ed30bcd5f5e5c03013a6c9c4ac3b9a1d9be0b` | tracked | Single `.ts` copied into `agent/extensions`; wraps `bindCore`/`dispatchEmit` in memory | `node custom-layer/check-patches.mjs --only omo-compaction-model` | Senpi `getCompactionModel` still returns `compaction.model` only when the session provider is spent (2026.10.19); no upstream PR (owner chose mod style) | Senpi honors `compaction.model` for every compaction; then delete the extension |
 | early-compaction | `C:/Users/USER/.omo-stable-500/home/.omo/agent/extensions/early-compaction.js`<br>`.../agent/early-compaction/` (config, qualified, receipts) | repo `C:/Users/USER/orca/projects/piomo-early-compaction-mod`<br>tracked source `src/extension.ts` (plus `scripts/mod.mjs`); `bun run build` produces the gitignored `dist/early-compaction.js`<br>remote https://github.com/grim-susemi/piomo-early-compaction-mod.git<br>commit `d72a6f923f3a3f53a04999bb7f9ce23b777d0d16` (built sha `c0416e2a...` = installed) | tracked | `node scripts/mod.mjs install --agent-dir <agent>` (builds, installs the extension, state, receipt; qualification pinned to senpi 2026.10.19) | `node custom-layer/check-patches.mjs --only early-compaction` | Custom early-compaction mod; no upstream PR; senpi's builtin early compaction is different | The builtin covers the same behavior, or `mod.mjs` reports the mod unqualified for the new senpi version and the owner retires it |
 | senpi-freeze-fix | `C:/Users/USER/.bun/install/global/node_modules/@code-yeongyu/senpi/dist/core/extensions/builtin/moved-path-guard/command-paths.js`<br>`.../dist/core/tools/filesystem-policy.js`<br>`.../dist/bundle/chunks/chunk-35M5MVUZ.js`<br>`.../dist/bundle/chunks/session-worker.js` | `custom-layer/senpi-freeze-fix/` in `piomo-orchestration-source`<br>remote https://github.com/grim-susemi/piomo-orchestration.git<br>commit pending (`work/freeze-fix`); `patch.mjs`, `probe.mjs`, `baselines.json` | tracked | `node patch.mjs --senpi-root <senpi> --apply`; hash-guarded anchors, `.freeze-fix.bak` per file, rollback with `--remove` | `node custom-layer/check-patches.mjs --only senpi-freeze-fix` (runs `patch.mjs --check` and `probe.mjs`) | Senpi 2026.10.19 has the defect (URL to UNC extraction + main-thread sync fallback walker); no issue filed (draft todo 6) | `probe.mjs` on a fresh install reports `defect-absent` (upstream fixed it) - mark the row `retired (upstream <version>)` |
+| omo-briefing | `<agent>/extensions/omo-briefing.js` (managed shim)<br>`<agent>/briefing/integration/generation-000012/` (82 files)<br>`<agent>/briefing/current.json` (generation and per-file sha256)<br>`<agent>/briefing/state/` (runtime state) | repo `C:/Users/USER/orca/projects/piomo-briefing`<br>remote https://github.com/grim-susemi/piomo-briefing.git<br>the installed entry is the LF form of the `extension.mjs` blob on `origin/main` (`50933927`); the generation was copied from a CRLF checkout before the repository pinned LF | tracked | `scripts/install.mjs` in the repository copies the built `dist/` into a new generation, then writes the shim and `current.json`; rollback is a newer generation, never repointing the shim | `node custom-layer/check-patches.mjs --only omo-briefing` (shim and `current.json` agree, recorded hashes match, entry traced to the remote); manual: tools register and a board answer arrives in a new process | Own product; not an upstream patch | The owner retires the board; remove the shim, keep generations and state |
+| omo-herdr-dashboard | `<agent>/extensions/omo-herdr-dashboard.js` (managed shim)<br>`<agent>/herdr-dashboard/integration/generation-000038/`<br>`<agent>/herdr-dashboard/integration/current.json` (generation only)<br>`<agent>/herdr-dashboard/state/`, `recovery/` (runtime state) | repo `C:/Users/USER/orca/projects/omo-herdr-dashboard`<br>remote https://github.com/grim-susemi/omo-herdr-dashboard.git<br>installed entry blob found on `origin/main` (`1d1080eb`) | tracked | Generation install from the repository (packages laid out as `coordination/`, `dag/`, `todo/`); keep state and recovery data; never reinstall an older generation number | `node custom-layer/check-patches.mjs --only omo-herdr-dashboard`; the generation records no per-file hashes, so only the entry and its source are checked (reported unverified); manual: load and pane display in a new process | Own product; not an upstream patch | The owner retires the dashboard |
+| omo-oracle-advisor | `<agent>/extensions/omo-oracle-advisor.js` (managed shim)<br>`<agent>/oracle-advisor/integration/generation-000001/` (entry `src/extension.mjs`)<br>`<agent>/oracle-advisor/current.json`, `oracle-policy-generation-000001.json` | repo `C:/Users/USER/orca/projects/piomo-oracle-advisor-mod` (not `piomo-oracle-arsenal-mod`)<br>remote https://github.com/grim-susemi/oracle-advisor-mod.git<br>all 13 generation files equal blobs of `origin/master` `24c9e78` | tracked | Generation install from the repository (2026-10-18) | `node custom-layer/check-patches.mjs --only omo-oracle-advisor`; manual: the four oracle tools register in a new process | Own product; not an upstream patch | The owner retires the advisor |
+| cli-anything | `<agent>/extensions/cli-anything/` (19 files: `index.ts`, `HARNESS.md`, commands, guides, scripts, templates, tests) | Third-party copy (CLI-Anything harness commands); upstream repository, version and licence of this copy are not recorded<br>tree hash `842736d063d6a1f678fb0e78895120add5f8c3a01e943b4ae6f97db6542bffb4` (checker algorithm) | external | Directory with `index.ts` placed in `agent/extensions` (2026-10-17); whether this lane loads it is not verified | `node custom-layer/check-patches.mjs --only cli-anything` (tree hash); origin reported unverified until recorded; manual: commands register in a new process | Unknown origin | The owner stops using `/cli-anything` (remove the directory), or its origin is recorded here |
+| user-config-selection | `<home>/.omo/omo.jsonc`, `config.jsonc`, `native-profile-selection.json`, `memory-model-selection.json`<br>`<agent>/settings.json`, `models.json`, `models.yml`, `models-store.json`, `native-profile-selection.json`, `mcp.json`, `trust.json` | Kept in place on this machine only; never copied into a repository (owner choices and machine data) | private | Edited by the owner or an approved change; dated backups beside each file | `node custom-layer/check-patches.mjs --only user-config-selection` (presence, `.json` parses; contents never printed); manual: compare selections with the pre-update inventory by safe per-field identities | None | None (owner data) |
+| stable-500-launcher | `C:/Users/USER/.omo-stable-500/omo.cmd` (wrapper R21)<br>`.../staging/omo-memory-selector-entry-r21.mjs` (reentry)<br>`.../staging/memory-rollback-5.1.38-r1/gate.mjs` and `manifest.json` | `custom-layer/stable-500-launcher/` (byte copies, captured 2026-10-21) and `custom-layer/memory-overlay/build/src/gate.mjs`<br>remote https://github.com/grim-susemi/piomo-orchestration.git | tracked | Written only by an approved update cutover (new generation and re-pin); never edited in place or copied back from the capture | `node custom-layer/check-patches.mjs --only stable-500-launcher` (live hashes, captured copies, pins equal installed global omo-ai, senpi and overlay versions); manual: launch probes after an approved update | Local lane launcher; not upstream | The lane runs stock omo with no overlay and no pins, and the owner retires the stable-500 wrapper |
+| pr-watch-script | `C:/Users/USER/orca/projects/기타 작업/.omo/scripts/pr-watch.mjs` (the copy the omo-check skill runs) | `scripts/pr-watch.mjs` in this repository (sanitized port: machine paths resolved from the home directory)<br>remote https://github.com/grim-susemi/piomo-orchestration.git, HEAD blob `a0e54106...` | tracked | The skill runs the workspace copy directly; the repository copy is not deployed | `node custom-layer/check-patches.mjs --only pr-watch-script` (both copies equal their recorded hashes); manual: behaviour parity of the two copies is not tested | None | The skill runs the repository copy, or stops using pr-watch |
 
 ## Update-time procedure
 
-1. Before an update: run `node custom-layer/check-patches.mjs`, save the output.
+1. Before an update: run `node custom-layer/check-patches.mjs --strict --json`, save the output.
+   Exit 1 stops the update until the failure is fixed or the ledger is corrected. Exit 3 is
+   allowed only with a recorded disposition for every `unverified` line. Then follow the
+   per-row rules in [`UPDATE-RULES.ko.md`](UPDATE-RULES.ko.md) and evaluate the candidate pair
+   in isolation (latest record: [`evaluations/`](evaluations/)).
 2. After an update: follow the "Update-time procedure" in
    `.omo/plans/research-session-freeze-fix.md` - `patch.mjs --check` first; on
    `version: "unsupported"` run `probe.mjs` on the fresh install, then retire
    (`defect-absent`) or re-derive the anchors (`defect-present`).
 3. Commit this ledger, the captures and any new `baselines.json` entry together, then push
    when approved.
+4. After the approved install and restart, run `--strict` again and record loading and
+   behaviour in a new process separately; the checker does not cover them.
 
-## Unresolved rows
+## Open gaps (2026-10-21)
 
-None. Eight rows have a git home; the memory overlay has no `.git` and is captured under
+- `cli-anything`: origin, version and licence of the copy are unrecorded.
+- `omo-herdr-dashboard`: the generation records no per-file hashes.
+- Uncommitted or unpushed sources: `--strict` lists every row whose source has uncommitted
+  changes or is not on its remote. Nothing is on GitHub until it is committed and pushed.
+- `pr-watch-script`: behaviour parity of the two copies is untested.
+- No row's loading or behaviour in a new process is checked by the checker.
+
+## Not in the ledger (checked exclusions)
+
+| entry | why |
+| --- | --- |
+| `<agent>/extensions/diff.js`, `files.js`, `prompt-url-widget.js`, `tps.js` | Host-generated shims that re-export a senpi builtin; `--strict` recognises them by exact content |
+| `<agent>/extensions/goal/` | No entry file (session state); reported as inert |
+| PR list in the omo-check skill | Upstream PR status, not installed custom code |
+
+## Source notes
+
+The memory overlay has no `.git` and is captured under
 `custom-layer/memory-overlay/` with its stock comparison. The coordination adapter output is
 not tracked byte-for-byte (its `.omo/evidence` attempt dir is gitignored), but it is
 reproducible from the tracked `scripts/build-adapter.mjs` and the pinned stock baseline; the

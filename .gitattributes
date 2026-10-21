@@ -7,3 +7,6 @@ docs/management-direction.md text eol=lf
 docs/update-preservation.md text eol=lf
 provenance/current-state.json text eol=lf
 provenance/allowlist.json text eol=lf
+custom-layer/memory-overlay/omo.js -text
+custom-layer/stable-500-launcher/** -text
+custom-layer/memory-overlay/build/** -text

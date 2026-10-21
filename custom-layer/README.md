@@ -12,17 +12,25 @@ Small PiOMO extensions that run on the owner's machine but had no repository of 
 
 ## Patch ledger and check
 
-`PATCHES.md` is the one ledger for every live custom patch: source location, remote and commit,
-state (`tracked` / `local-commit`), how it is applied, its check command, the upstream link
-and its retire condition. `check-patches.mjs` re-checks the rows read-only and exits 0 even
-when a row drifts:
+`PATCHES.md` is the one ledger for every live custom item: source location, remote and commit,
+state (`tracked` / `local-commit` / `private` / `external`), how it is applied, its check command,
+the upstream link and its retire condition. Per-row update rules are in `UPDATE-RULES.ko.md`;
+isolated evaluations of new official versions are in `evaluations/`. `check-patches.mjs`
+re-checks the rows read-only and exits 0 even when a row drifts; `--strict` turns it into the
+update gate (exit 0 pass / 1 fail / 3 incomplete):
 
 ```bash
 cd C:/Users/USER/orca/projects/piomo-orchestration-source
-node custom-layer/check-patches.mjs                # one line per patch + summary
+node custom-layer/check-patches.mjs                # one line per row + summary
 node custom-layer/check-patches.mjs --only <name>  # one row
+node custom-layer/check-patches.mjs --strict       # + ledger/discovery comparison and a verdict
+node custom-layer/check-patches.mjs --strict --json
 node --test custom-layer/test/check-patches.test.mjs
 ```
+
+`stable-500-launcher/` and `memory-overlay/build/` are byte captures of the lane launcher and
+of the overlay's build/test inputs, which had no repository. They are for preservation and
+review, not for running from here.
 
 The `memory-overlay` row is captured here because its build project has no git repository:
 `memory-overlay/omo.js` is a byte copy of the installed overlay bundle, and the two smaller

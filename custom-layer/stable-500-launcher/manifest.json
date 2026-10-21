@@ -1,0 +1,49 @@
+{
+  "revision": "memory-rollback-r1",
+  "omo": "5.1.38",
+  "senpi": "2026.10.19",
+  "upstream": {
+    "repository": "code-yeongyu/oh-my-openagent",
+    "pull": 10000,
+    "head": "4406c7776ca6582cc206819fadc1b34a060d4729",
+    "base": "90ba59d80a16732f3e56892478c42f773105062c"
+  },
+  "bundles": [
+    {
+      "name": "omo.js",
+      "beforeSha256": "de9603b563e9bca417f431006e0ced5bab0e126dc3b530b5fd1e83c0371cff69",
+      "afterSha256": "4a8aef923825ccd5fbb5ab6d4b3b72e0ae145b670309f1db3ead53827c029476",
+      "upstreamSourceFingerprint": "xJhODPFETGNMMSmiHNf8CItOTEAiv2idtqro0O06oWc",
+      "bodyDigest": "WZ7EJJ7Is4oTUIP5bzx4wmkalmgVB8ewi12FZK7If4Y"
+    },
+    {
+      "name": "omo-memory-memfs.js",
+      "beforeSha256": "8b40193e6882b3451ffa4b1b879fa7528e5557896191517b4352740b796d6260",
+      "afterSha256": "611ec44b91e98abbd1375e24c87b72a033a3de7864c1788ce07e56ad8f0be17e",
+      "upstreamSourceFingerprint": "ditvwW3GfS0NnYiSHcw1gj4UpO4mYBCJfCrdfnROTns",
+      "bodyDigest": "d9PrAgyy91xWewLWTzKl6z2Jpc-Um1AOzPlezs1q8TQ"
+    },
+    {
+      "name": "omo-memory-doctor.js",
+      "beforeSha256": "fb63df01193939faacb3152f802368b7b6fa36a3c4de0df5bdfd02b8f3c3c8a4",
+      "afterSha256": "1f4758613c914142864b12cc985213c0aeb4f79e933f12402b61b5ad9aa79b16",
+      "upstreamSourceFingerprint": "ESb2VeNHyTvdsVL6CV5DNRKlfWQf_8GFKIHPJBKtLxg",
+      "bodyDigest": "tLaHPgcQ5RuGEq1ICCFIKfrVljD0yhcoM178wvVA334"
+    }
+  ],
+  "entryFiles": [
+    {
+      "path": "package.json",
+      "sha256": "d3c2b02f7e410b82da7bf47896bb86467f98edb33b6f278e7c260a3fdaa89006"
+    },
+    {
+      "path": "bin/omo.js",
+      "sha256": "3e4a200dcfb6e9bc6d66aa8f987f721b086519b5aed8b168ab5b27138301ebfa"
+    },
+    {
+      "path": "bin/lib/launcher.js",
+      "sha256": "e85e7191bc694e5837c15f9f4e0a194ad059198da4d16a013b9f1e74bd6a9f03"
+    }
+  ],
+  "gateSha256": "5c74e89b8b47f9108d5a974f3b41960ff7c3896d25cc46d8d8663b188a02479c"
+}
