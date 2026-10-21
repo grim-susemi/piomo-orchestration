@@ -169,9 +169,11 @@ senpi 패치는 설치본뿐 아니라 모든 runtime snapshot에 적용돼야 �
 
 early-compaction 재자격 순서(2026-10-22 19-2에서 확인):
 
-1. `PIOMO_SENPI_DIR=<전역 senpi> PIOMO_QA_CM_ROOT=<설치된 협업 모드 소스> node scripts/mod.mjs qualify --agent-dir <agent>`
+1. `PIOMO_SENPI_DIR=<전역 senpi> node scripts/mod.mjs qualify --agent-dir <agent>`
    - 레인 홈에서는 HOME이 달라 senpi를 못 찾으므로 `PIOMO_SENPI_DIR`이 필요하다.
-   - 협업 모드 포트가 아직 병합 전이면 `PIOMO_QA_CM_ROOT`로 그 worktree를 가리킨다.
+   - QA는 기본으로 협업 모드 main checkout(`piomo-agent-coordination-mod`)을 빌드한다.
+     그 checkout이 설치된 협업 모드와 같은 커밋인지 먼저 본다.
+   - 협업 모드 포트가 main에 합쳐지기 전이면 `PIOMO_QA_CM_ROOT`로 그 worktree를 가리킨다.
 2. 통과하면 `node scripts/mod.mjs install --agent-dir <agent>`로 `qualified.json`을 반영한다(config는 유지된다).
 3. `mod.mjs status`가 `active`이고 `qualified_versions`에 새 버전이 있는지 본다.
 

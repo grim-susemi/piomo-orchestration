@@ -64,8 +64,6 @@ const SCOPE =
 
 const ORCH = REPO;
 const COORD = "C:/Users/USER/orca/projects/piomo-agent-coordination-mod";
-// The 5.1.40 adapter is built from this worktree branch (port/omo-5.1.40), not yet merged into COORD.
-const COORD_PORT = "C:/Users/USER/orca/projects/piomo-agent-coordination-mod-wt/port-5.1.40";
 const COMPACTION = "C:/Users/USER/orca/projects/omo-compaction-model";
 const EARLY = "C:/Users/USER/orca/projects/piomo-early-compaction-mod";
 const BRIEFING = "C:/Users/USER/orca/projects/piomo-briefing";
@@ -708,11 +706,11 @@ export function makeRows() {
       name: "coordination-adapters",
       hint: "tracked",
       location: "dist/extension.js+scripts/build-adapter.mjs",
-      repoPath: COORD_PORT,
+      repoPath: COORD,
       discover: [`${AGENT}/packages/piomo-agent-coordination-mod`],
       sourcePaths: ["dist", "scripts", "src", "test"],
       worktreeChecks: [
-        { path: `${COORD_PORT}/dist/extension.js`, expected: "6035ef1aef60e706bf8fa52a7f6b7946a6c0616d6030f38740bdec31d13bb68e" },
+        { path: `${COORD}/dist/extension.js`, expected: "6035ef1aef60e706bf8fa52a7f6b7946a6c0616d6030f38740bdec31d13bb68e" },
       ],
       sourceText: [
         { path: "scripts/build-adapter.mjs", contains: "d41bc807b6f91768db84b7f8f76092107aebf9934888cc749174d88a1c00ac6b" },
