@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 
 export async function memoryFixture(plugin) {
-  const work = "C:/Users/USER/orca/projects/piomo-memory-rollback-5.1.38/.work";
+  const work = "C:/Users/USER/orca/projects/piomo-memory-rollback-5.1.40/.work";
   await mkdir(work, { recursive: true });
   const sandbox = await mkdtemp(`${work}/native-`);
   const home = `${sandbox}/home`;

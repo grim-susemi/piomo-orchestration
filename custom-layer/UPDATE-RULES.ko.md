@@ -167,6 +167,14 @@ senpi 패치는 설치본뿐 아니라 모든 runtime snapshot에 적용돼야 �
 원장의 은퇴 조건을 따른다. early-compaction은 새 senpi 버전에서 `scripts/mod.mjs`의 자격 확인을
 다시 통과해야 유지한다.
 
+early-compaction 재자격 순서(2026-10-22 19-2에서 확인):
+
+1. `PIOMO_SENPI_DIR=<전역 senpi> PIOMO_QA_CM_ROOT=<설치된 협업 모드 소스> node scripts/mod.mjs qualify --agent-dir <agent>`
+   - 레인 홈에서는 HOME이 달라 senpi를 못 찾으므로 `PIOMO_SENPI_DIR`이 필요하다.
+   - 협업 모드 포트가 아직 병합 전이면 `PIOMO_QA_CM_ROOT`로 그 worktree를 가리킨다.
+2. 통과하면 `node scripts/mod.mjs install --agent-dir <agent>`로 `qualified.json`을 반영한다(config는 유지된다).
+3. `mod.mjs status`가 `active`이고 `qualified_versions`에 새 버전이 있는지 본다.
+
 ### cli-anything
 
 제3자 사본이다. 출처(저장소·버전·라이선스)를 기록하기 전에는 `--strict`가 미검증으로 보고한다.

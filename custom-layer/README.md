@@ -39,3 +39,10 @@ bundles are stored as `git diff --no-index` output against stock omo-ai 5.1.38. 
 
 Run the ledger check before and after every omo/senpi update; the plan's update-time procedure
 (`.omo/plans/research-session-freeze-fix.md`) uses it to decide re-apply vs retire.
+
+`plan-review-unlock/` is a managed omo-task anchor delta rather than a separately
+loaded extension. It permits explicitly requested plan reviews after execution
+while preserving the user-request and plan-file prerequisites. Check it with
+`node custom-layer/check-patches.mjs --only plan-review-unlock`; see its README for
+the official-update defect probe and retirement rules. Already running
+conversations may retain the old task closure until reload/restart.

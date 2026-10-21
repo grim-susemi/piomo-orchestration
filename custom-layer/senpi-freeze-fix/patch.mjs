@@ -29,8 +29,62 @@ const NEW_SUFFIX = ".freeze-fix.new";
 const FILE_COMMAND_PATHS =
   "dist/core/extensions/builtin/moved-path-guard/command-paths.js";
 const FILE_FILESYSTEM_POLICY = "dist/core/tools/filesystem-policy.js";
-const FILE_CHUNK = "dist/bundle/chunks/chunk-35M5MVUZ.js";
 const FILE_SESSION_WORKER = "dist/bundle/chunks/session-worker.js";
+
+/**
+ * Every release names its bundle chunk and the minified locals inside it itself;
+ * identifiers move between builds (path13 -> path14, resolve6 -> resolve8). The
+ * 2026.10.19 entry is the original byte-exact anchor set and must not change.
+ */
+const BUNDLE_SHAPES = {
+  "2026.10.19": {
+    chunk: "dist/bundle/chunks/chunk-35M5MVUZ.js",
+    chunkShape: {
+      match: "match",
+      path: "path13",
+      segment: "segment",
+      anchored: "anchored",
+      resolve: "resolve6",
+      canonical: "canonicalPath2",
+    },
+    workerShape: {
+      match: "match3",
+      path: "path28",
+      segment: "segment2",
+      anchored: "anchored2",
+      resolve: "resolve23",
+      canonical: "canonicalPath3",
+    },
+  },
+  "2026.10.19-2": {
+    chunk: "dist/bundle/chunks/chunk-F4ZU4RBE.js",
+    chunkShape: {
+      match: "match",
+      path: "path14",
+      segment: "segment",
+      anchored: "anchored",
+      resolve: "resolve8",
+      canonical: "canonicalPath2",
+    },
+    workerShape: {
+      match: "match3",
+      path: "path29",
+      segment: "segment2",
+      anchored: "anchored2",
+      resolve: "resolve25",
+      canonical: "canonicalPath3",
+    },
+  },
+};
+
+export const KNOWN_VERSIONS = Object.keys(BUNDLE_SHAPES);
+const NEWEST_VERSION = "2026.10.19-2";
+
+/** The four files a version targets; an unknown version is shown the newest shape. */
+export function filesFor(version = NEWEST_VERSION) {
+  const shape = BUNDLE_SHAPES[version] ?? BUNDLE_SHAPES[NEWEST_VERSION];
+  return [FILE_COMMAND_PATHS, FILE_FILESYSTEM_POLICY, shape.chunk, FILE_SESSION_WORKER];
+}
 
 function sha256(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
@@ -75,9 +129,52 @@ function embeddedPathsBundleGuard(param) {
 const WORDS_BUNDLE_GUARD =
   "if(/^[A-Za-z][A-Za-z0-9+.-]*:\\/\\//.test(word))continue;";
 
-/** Every target file and its byte-exact anchored edits, per D2. */
-async function buildTargets() {
+/** One bundled copy of command-paths.js + filesystem-policy.js, with this build's locals. */
+function bundleTarget(file, shape, predicate) {
+  return {
+    file,
+    edits: [
+      {
+        name: "embeddedPaths",
+        anchor:
+          "function embeddedPaths(command){return[...command.matchAll(EMBEDDED_PATH)].flatMap(" +
+          shape.match +
+          "=>{let " +
+          shape.path +
+          "=",
+        replacement:
+          "function embeddedPaths(command){return[...command.matchAll(EMBEDDED_PATH)].flatMap(" +
+          shape.match +
+          "=>{" +
+          embeddedPathsBundleGuard(shape.match) +
+          "let " +
+          shape.path +
+          "=",
+      },
+      {
+        name: "commandPaths",
+        anchor: `for(let word of words(${shape.segment})){let ${shape.anchored}=anchoredPath(word);`,
+        replacement:
+          `for(let word of words(${shape.segment})){` +
+          WORDS_BUNDLE_GUARD +
+          `let ${shape.anchored}=anchoredPath(word);`,
+      },
+      {
+        name: "canonicalizeFilesystemPath",
+        anchor: `async function canonicalizeFilesystemPath(filePath){let absolutePath=${shape.resolve}(filePath),${shape.canonical}=await withResolutionDeadline(canonicalizeByOpening(absolutePath));return ${shape.canonical}!==RESOLUTION_TIMED_OUT?${shape.canonical}:realpathWithoutOpenStrict(absolutePath)}`,
+        replacement: lines(
+          predicate,
+          `async function canonicalizeFilesystemPath(filePath){let absolutePath=${shape.resolve}(filePath),${shape.canonical}=await withResolutionDeadline(canonicalizeByOpening(absolutePath));if(${shape.canonical}!==RESOLUTION_TIMED_OUT)return ${shape.canonical};if(omoFreezeFixUncTimeout(absolutePath))throw Object.assign(new Error("ETIMEDOUT: UNC path did not resolve within the deadline"),{code:"ETIMEDOUT",path:absolutePath,omoFreezeFix:!0});return realpathWithoutOpenStrict(absolutePath)}`
+        ),
+      },
+    ],
+  };
+}
+
+/** Every target file and its byte-exact anchored edits, per D2 and for this version's bundle. */
+async function buildTargets(version = NEWEST_VERSION) {
   const predicate = await predicateSource();
+  const shape = BUNDLE_SHAPES[version] ?? BUNDLE_SHAPES[NEWEST_VERSION];
 
   return [
     {
@@ -137,69 +234,8 @@ async function buildTargets() {
         },
       ],
     },
-    {
-      file: FILE_CHUNK,
-      edits: [
-        {
-          name: "embeddedPaths",
-          anchor:
-            "function embeddedPaths(command){return[...command.matchAll(EMBEDDED_PATH)].flatMap(match=>{let path13=",
-          replacement:
-            "function embeddedPaths(command){return[...command.matchAll(EMBEDDED_PATH)].flatMap(match=>{" +
-            embeddedPathsBundleGuard("match") +
-            "let path13=",
-        },
-        {
-          name: "commandPaths",
-          anchor: "for(let word of words(segment)){let anchored=anchoredPath(word);",
-          replacement:
-            "for(let word of words(segment)){" +
-            WORDS_BUNDLE_GUARD +
-            "let anchored=anchoredPath(word);",
-        },
-        {
-          name: "canonicalizeFilesystemPath",
-          anchor:
-            "async function canonicalizeFilesystemPath(filePath){let absolutePath=resolve6(filePath),canonicalPath2=await withResolutionDeadline(canonicalizeByOpening(absolutePath));return canonicalPath2!==RESOLUTION_TIMED_OUT?canonicalPath2:realpathWithoutOpenStrict(absolutePath)}",
-          replacement: lines(
-            predicate,
-            'async function canonicalizeFilesystemPath(filePath){let absolutePath=resolve6(filePath),canonicalPath2=await withResolutionDeadline(canonicalizeByOpening(absolutePath));if(canonicalPath2!==RESOLUTION_TIMED_OUT)return canonicalPath2;if(omoFreezeFixUncTimeout(absolutePath))throw Object.assign(new Error("ETIMEDOUT: UNC path did not resolve within the deadline"),{code:"ETIMEDOUT",path:absolutePath,omoFreezeFix:!0});return realpathWithoutOpenStrict(absolutePath)}'
-          ),
-        },
-      ],
-    },
-    {
-      file: FILE_SESSION_WORKER,
-      edits: [
-        {
-          name: "embeddedPaths",
-          anchor:
-            "function embeddedPaths(command){return[...command.matchAll(EMBEDDED_PATH)].flatMap(match3=>{let path28=",
-          replacement:
-            "function embeddedPaths(command){return[...command.matchAll(EMBEDDED_PATH)].flatMap(match3=>{" +
-            embeddedPathsBundleGuard("match3") +
-            "let path28=",
-        },
-        {
-          name: "commandPaths",
-          anchor:
-            "for(let word of words(segment2)){let anchored2=anchoredPath(word);",
-          replacement:
-            "for(let word of words(segment2)){" +
-            WORDS_BUNDLE_GUARD +
-            "let anchored2=anchoredPath(word);",
-        },
-        {
-          name: "canonicalizeFilesystemPath",
-          anchor:
-            "async function canonicalizeFilesystemPath(filePath){let absolutePath=resolve23(filePath),canonicalPath3=await withResolutionDeadline(canonicalizeByOpening(absolutePath));return canonicalPath3!==RESOLUTION_TIMED_OUT?canonicalPath3:realpathWithoutOpenStrict(absolutePath)}",
-          replacement: lines(
-            predicate,
-            'async function canonicalizeFilesystemPath(filePath){let absolutePath=resolve23(filePath),canonicalPath3=await withResolutionDeadline(canonicalizeByOpening(absolutePath));if(canonicalPath3!==RESOLUTION_TIMED_OUT)return canonicalPath3;if(omoFreezeFixUncTimeout(absolutePath))throw Object.assign(new Error("ETIMEDOUT: UNC path did not resolve within the deadline"),{code:"ETIMEDOUT",path:absolutePath,omoFreezeFix:!0});return realpathWithoutOpenStrict(absolutePath)}'
-          ),
-        },
-      ],
-    },
+    bundleTarget(shape.chunk, shape.chunkShape, predicate),
+    bundleTarget(FILE_SESSION_WORKER, shape.workerShape, predicate),
   ];
 }
 
@@ -276,7 +312,6 @@ function parseArgs(argv) {
 }
 
 async function checkTree(senpiRoot) {
-  const targets = await buildTargets();
   const payload = {
     version: "unsupported",
     detectedVersion: undefined,
@@ -305,6 +340,7 @@ async function checkTree(senpiRoot) {
   payload.supported = Boolean(versionEntry);
   if (versionEntry) payload.version = detectedVersion;
 
+  const targets = await buildTargets(detectedVersion);
   for (const target of targets) {
     const absolute = join(senpiRoot, target.file);
     let buffer;
@@ -337,13 +373,25 @@ async function checkTree(senpiRoot) {
       continue;
     }
     const hash = sha256(buffer);
+    // senpi-stream-hash-leak may sit on top of these edits in the same bundle file: the
+    // whole-file hash is then new, but every freeze-fix edit is still present exactly once.
+    const layered =
+      hash !== entry.patched &&
+      hash !== entry.pristine &&
+      classifyText(text, target.edits) === "patched";
     const state =
-      hash === entry.patched
+      hash === entry.patched || layered
         ? "patched"
         : hash === entry.pristine
           ? "pristine"
           : "unknown";
-    payload.files[target.file] = { state, sha256: hash, anchorsFound, patchesFound };
+    payload.files[target.file] = {
+      state,
+      ...(layered ? { layered: true } : {}),
+      sha256: hash,
+      anchorsFound,
+      patchesFound,
+    };
   }
   return payload;
 }
@@ -355,7 +403,6 @@ async function writeReceipt(receiptPath, payload) {
 }
 
 async function runApply(senpiRoot, receiptPath) {
-  const targets = await buildTargets();
   const baselines = await loadBaselines();
   const version = JSON.parse(
     await readFile(join(senpiRoot, "package.json"), "utf8")
@@ -365,6 +412,7 @@ async function runApply(senpiRoot, receiptPath) {
     print("ERROR", { reason: "unsupported-version", version: "unsupported", detectedVersion: version });
     process.exit(2);
   }
+  const targets = await buildTargets(version);
 
   const plans = [];
   for (const target of targets) {
@@ -384,6 +432,8 @@ async function runApply(senpiRoot, receiptPath) {
     const hash = sha256(buffer);
     if (hash === entry.patched) continue;
     if (hash !== entry.pristine) {
+      // Already applied, with another managed patch layered on top.
+      if (classifyText(buffer.toString("utf8"), target.edits) === "patched") continue;
       print("ERROR", { reason: "unknown-file", file: target.file, sha256: hash });
       process.exit(2);
     }
@@ -503,7 +553,6 @@ async function runApply(senpiRoot, receiptPath) {
 }
 
 async function runRemove(senpiRoot, receiptPath) {
-  const targets = await buildTargets();
   const baselines = await loadBaselines();
   const version = JSON.parse(
     await readFile(join(senpiRoot, "package.json"), "utf8")
@@ -513,6 +562,7 @@ async function runRemove(senpiRoot, receiptPath) {
     print("ERROR", { reason: "unsupported-version", version: "unsupported", detectedVersion: version });
     process.exit(2);
   }
+  const targets = await buildTargets(version);
 
   const plans = [];
   for (const target of targets) {

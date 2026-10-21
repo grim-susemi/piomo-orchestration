@@ -1,40 +1,40 @@
 {
   "revision": "memory-rollback-r1",
-  "omo": "5.1.38",
-  "senpi": "2026.10.19",
+  "omo": "5.1.40",
+  "senpi": "2026.10.19-2",
   "upstream": {
     "repository": "code-yeongyu/oh-my-openagent",
     "pull": 10000,
-    "head": "4406c7776ca6582cc206819fadc1b34a060d4729",
-    "base": "90ba59d80a16732f3e56892478c42f773105062c"
+    "head": "dd86ddb7f9fd919ed4921bca2668c0016be7817e",
+    "base": "c2c258d6ea7284b3aeae052fbcee3a5231e0793e"
   },
   "bundles": [
     {
       "name": "omo.js",
-      "beforeSha256": "de9603b563e9bca417f431006e0ced5bab0e126dc3b530b5fd1e83c0371cff69",
-      "afterSha256": "4a8aef923825ccd5fbb5ab6d4b3b72e0ae145b670309f1db3ead53827c029476",
-      "upstreamSourceFingerprint": "xJhODPFETGNMMSmiHNf8CItOTEAiv2idtqro0O06oWc",
-      "bodyDigest": "WZ7EJJ7Is4oTUIP5bzx4wmkalmgVB8ewi12FZK7If4Y"
+      "beforeSha256": "99262013ba80365491acdb1224291f6f41c5b0e1013e07ca605e452ed8c83b19",
+      "afterSha256": "de8408a08dc84a389316af6f6fc407fa260d129b04748e354e291b104cee8c6c",
+      "upstreamSourceFingerprint": "Uxy2D2Vx5WzEcUzWFRyP3JAny46HjSapbuqLGCarr0E",
+      "bodyDigest": "KWpjhTDZ2_9hoPuzCLG4_Ol_LSbSvFVPwGd_HSLHwZ8"
     },
     {
       "name": "omo-memory-memfs.js",
-      "beforeSha256": "8b40193e6882b3451ffa4b1b879fa7528e5557896191517b4352740b796d6260",
-      "afterSha256": "611ec44b91e98abbd1375e24c87b72a033a3de7864c1788ce07e56ad8f0be17e",
-      "upstreamSourceFingerprint": "ditvwW3GfS0NnYiSHcw1gj4UpO4mYBCJfCrdfnROTns",
-      "bodyDigest": "d9PrAgyy91xWewLWTzKl6z2Jpc-Um1AOzPlezs1q8TQ"
+      "beforeSha256": "a1c8a81358b7e5f22f323040d5489d13c33d756ee710fa5f5d79187667d33b7b",
+      "afterSha256": "7f832ed672cad107d7a54c3f6c90edd7275da2af1bf7305b2cefead56a6e3bdc",
+      "upstreamSourceFingerprint": "08c9HsI8Nha40Cm0yntpEP_i2W2HuUmcWNmt75sh5D0",
+      "bodyDigest": "Z_KDyw5nT_sSNWDAqzf6fAGZo9t320-DW3AHzrRPzJk"
     },
     {
       "name": "omo-memory-doctor.js",
-      "beforeSha256": "fb63df01193939faacb3152f802368b7b6fa36a3c4de0df5bdfd02b8f3c3c8a4",
-      "afterSha256": "1f4758613c914142864b12cc985213c0aeb4f79e933f12402b61b5ad9aa79b16",
-      "upstreamSourceFingerprint": "ESb2VeNHyTvdsVL6CV5DNRKlfWQf_8GFKIHPJBKtLxg",
-      "bodyDigest": "tLaHPgcQ5RuGEq1ICCFIKfrVljD0yhcoM178wvVA334"
+      "beforeSha256": "cdea5f06ea8b37cd6bd3c3171d24785af747b423f7ea8bd8acf6d53032801bfa",
+      "afterSha256": "900cb31eaf81e6b75e188820a0738f4c8943338d5d1cc45841637151b6a3e813",
+      "upstreamSourceFingerprint": "fLLrDExEFrKzso4lY3WQNv9jJ3I6Kv_ltvO7d3PxRq8",
+      "bodyDigest": "32fTKJUpnQkcnZ_o3QgOdc96t4ydwR7LtuhZapyhtM0"
     }
   ],
   "entryFiles": [
     {
       "path": "package.json",
-      "sha256": "d3c2b02f7e410b82da7bf47896bb86467f98edb33b6f278e7c260a3fdaa89006"
+      "sha256": "702ad19998487a50c0765a0c9613ab8e50855044ddeb667451d571b1f277def9"
     },
     {
       "path": "bin/omo.js",
@@ -45,5 +45,5 @@
       "sha256": "e85e7191bc694e5837c15f9f4e0a194ad059198da4d16a013b9f1e74bd6a9f03"
     }
   ],
-  "gateSha256": "5c74e89b8b47f9108d5a974f3b41960ff7c3896d25cc46d8d8663b188a02479c"
+  "gateSha256": "19f1fb535faac06d2b971e8c06713c9ae24e0ad5a4dadd13a504119d0e456fda"
 }

@@ -5,7 +5,10 @@
 //   - the source repository's HEAD, remote, ahead/behind against its upstream, and dirtiness;
 //   - whether the tracked source blob and the captured copy still match what is installed;
 //   - the installed file hashes;
-//   - for senpi-freeze-fix, `patch.mjs --check` and `probe.mjs` on the installed senpi root.
+//   - for the senpi anchor patches (senpi-freeze-fix, senpi-stream-hash-leak), `patch.mjs --check`
+//     and `probe.mjs` on the installed senpi root AND on every runtime snapshot under
+//     <agent>/runtime. Sessions run the snapshot, not the install, so a snapshot that is not
+//     patched means the fix is not live.
 //
 // It never writes to a repository or to an installed file. `probe.mjs` copies senpi's
 // dist to a temp directory and deletes it, as documented in its own README.
@@ -29,6 +32,10 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import {
+  classifyText as classifyPlanReviewText,
+  transformText as transformPlanReviewText,
+} from "./plan-review-unlock/patch.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.dirname(HERE);
@@ -38,7 +45,7 @@ const AGENT =
   "C:/Users/USER/.omo-stable-500/home/.omo/agent";
 const OVERLAY =
   process.env.OMO_CHECK_OVERLAY_ROOT ||
-  "C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.38-r1/package";
+  "C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.40-r1/package";
 const GLOBAL_OMO =
   process.env.OMO_CHECK_GLOBAL_OMO ||
   "C:/Users/USER/.bun/install/global/node_modules/omo-ai";
@@ -57,17 +64,29 @@ const SCOPE =
 
 const ORCH = REPO;
 const COORD = "C:/Users/USER/orca/projects/piomo-agent-coordination-mod";
+// The 5.1.40 adapter is built from this worktree branch (port/omo-5.1.40), not yet merged into COORD.
+const COORD_PORT = "C:/Users/USER/orca/projects/piomo-agent-coordination-mod-wt/port-5.1.40";
 const COMPACTION = "C:/Users/USER/orca/projects/omo-compaction-model";
 const EARLY = "C:/Users/USER/orca/projects/piomo-early-compaction-mod";
 const BRIEFING = "C:/Users/USER/orca/projects/piomo-briefing";
 const DASHBOARD = "C:/Users/USER/orca/projects/omo-herdr-dashboard";
 const ORACLE = "C:/Users/USER/orca/projects/piomo-oracle-advisor-mod";
 
+// Both chunk names are listed: chunk-35M5MVUZ.js is senpi 2026.10.19, chunk-F4ZU4RBE.js is 2026.10.19-2.
+// The lists only decide whether a --from-backups probe runs; an absent file is skipped.
 const FREEZE_FILES = [
   "dist/core/extensions/builtin/moved-path-guard/command-paths.js",
   "dist/core/tools/filesystem-policy.js",
   "dist/bundle/chunks/chunk-35M5MVUZ.js",
+  "dist/bundle/chunks/chunk-F4ZU4RBE.js",
   "dist/bundle/chunks/session-worker.js",
+];
+
+const LEAK_FILES = [
+  "dist/bundle/chunks/chunk-35M5MVUZ.js",
+  "dist/bundle/chunks/chunk-F4ZU4RBE.js",
+  "dist/bundle/chunks/session-worker.js",
+  "dist/core/extensions/builtin/anthropic-subscription/session-commit-boundary.js",
 ];
 
 // ---------------------------------------------------------------------------
@@ -97,6 +116,20 @@ export function aggregate(statuses) {
   if (list.includes("drift")) return "drift";
   if (list.includes("error")) return "error";
   return "ok";
+}
+
+/** Runtime snapshot directories senpi hands off to (each holds runtime-snapshot.json). */
+export function runtimeRoots(agentDir) {
+  const root = path.join(agentDir, "runtime");
+  let names = [];
+  try {
+    names = fs.readdirSync(root);
+  } catch {
+    return [];
+  }
+  return names
+    .map((name) => path.join(root, name))
+    .filter((dir) => fs.existsSync(path.join(dir, "runtime-snapshot.json")));
 }
 
 export function sha256File(file) {
@@ -408,13 +441,25 @@ export function checkInstalled(file, expected) {
   const expectedList = Array.isArray(expected) ? expected : [expected];
   try {
     const actual = sha256File(file);
-    const matched = expectedList.find((value) => value === actual) || null;
+    let matched = expectedList.find((value) => value === actual) || null;
+    let normalizedBy;
+    // Compare the full original bytes after undoing this exact managed delta.
+    // Any unrelated change still fails the existing baseline hash check.
+    if (!matched && path.basename(file) === "omo-task.js") {
+      const text = fs.readFileSync(file, "utf8");
+      if (classifyPlanReviewText(text) === "patched") {
+        const baseHash = sha256Buffer(Buffer.from(transformPlanReviewText(text, "remove")));
+        matched = expectedList.find((value) => value === baseHash) || null;
+        if (matched) normalizedBy = "plan-review-unlock";
+      }
+    }
     return {
       status: matched ? "ok" : "drift",
       actual,
       expected: expectedList.join("|"),
       matched,
       label: file,
+      ...(normalizedBy ? { normalizedBy } : {}),
     };
   } catch {
     return { status: "missing", actual: null, expected: expectedList.join("|"), matched: null, label: file };
@@ -621,6 +666,19 @@ function runJsonLine(command, args, prefix, timeout = 60000) {
 export function makeRows() {
   return [
     {
+      name: "plan-review-unlock",
+      hint: "tracked",
+      location: "custom-layer/plan-review-unlock",
+      repoPath: ORCH,
+      sourceFiles: [
+        `${HERE}/plan-review-unlock/patch.mjs`,
+        `${HERE}/plan-review-unlock/probe.mjs`,
+        `${HERE}/plan-review-unlock/test/patch.test.mjs`,
+      ],
+      omoPatch: true,
+      installed: [],
+    },
+    {
       name: "memory-overlay",
       hint: "tracked",
       location: "custom-layer/memory-overlay",
@@ -637,33 +695,34 @@ export function makeRows() {
         "build/test-captured/memory-fixture.mjs",
       ],
       capturedExpected: {
-        "omo.js": "4a8aef923825ccd5fbb5ab6d4b3b72e0ae145b670309f1db3ead53827c029476",
-        "build/src/gate.mjs": "5c74e89b8b47f9108d5a974f3b41960ff7c3896d25cc46d8d8663b188a02479c",
+        "omo.js": "de8408a08dc84a389316af6f6fc407fa260d129b04748e354e291b104cee8c6c",
+        "build/src/gate.mjs": "19f1fb535faac06d2b971e8c06713c9ae24e0ad5a4dadd13a504119d0e456fda",
       },
       installed: [
-        { path: `${OVERLAY}/plugin/extensions/omo.js`, expected: "4a8aef923825ccd5fbb5ab6d4b3b72e0ae145b670309f1db3ead53827c029476" },
-        { path: `${OVERLAY}/plugin/extensions/omo-memory-doctor.js`, expected: "1f4758613c914142864b12cc985213c0aeb4f79e933f12402b61b5ad9aa79b16" },
-        { path: `${OVERLAY}/plugin/extensions/omo-memory-memfs.js`, expected: "611ec44b91e98abbd1375e24c87b72a033a3de7864c1788ce07e56ad8f0be17e" },
+        { path: `${OVERLAY}/plugin/extensions/omo.js`, expected: "de8408a08dc84a389316af6f6fc407fa260d129b04748e354e291b104cee8c6c" },
+        { path: `${OVERLAY}/plugin/extensions/omo-memory-doctor.js`, expected: "900cb31eaf81e6b75e188820a0738f4c8943338d5d1cc45841637151b6a3e813" },
+        { path: `${OVERLAY}/plugin/extensions/omo-memory-memfs.js`, expected: "7f832ed672cad107d7a54c3f6c90edd7275da2af1bf7305b2cefead56a6e3bdc" },
       ],
     },
     {
       name: "coordination-adapters",
       hint: "tracked",
       location: "dist/extension.js+scripts/build-adapter.mjs",
-      repoPath: COORD,
+      repoPath: COORD_PORT,
       discover: [`${AGENT}/packages/piomo-agent-coordination-mod`],
-      sourceBlobs: [
-        { path: "dist/extension.js", expected: "1a717c64505adfacb484e4906bead927c4d0975598f1c1928e695f2b6174233f" },
+      sourcePaths: ["dist", "scripts", "src", "test"],
+      worktreeChecks: [
+        { path: `${COORD_PORT}/dist/extension.js`, expected: "6035ef1aef60e706bf8fa52a7f6b7946a6c0616d6030f38740bdec31d13bb68e" },
       ],
       sourceText: [
-        { path: "scripts/build-adapter.mjs", contains: "36d98c7ab3cc07349b60adc8bc7365a85e7573653ebab574d0114c2571d53dcd" },
+        { path: "scripts/build-adapter.mjs", contains: "d41bc807b6f91768db84b7f8f76092107aebf9934888cc749174d88a1c00ac6b" },
       ],
       installed: [
-        { path: `${AGENT}/packages/piomo-agent-coordination-mod/dist/extension.js`, expected: "1a717c64505adfacb484e4906bead927c4d0975598f1c1928e695f2b6174233f" },
-        { path: `${OVERLAY}/plugin/extensions/omo-task.js`, expected: "2b559bb11f0285072722cffbb7f322756c81aec867f6fb4a683278f075d7f783" },
-        { path: `${GLOBAL_OMO}/plugin/extensions/omo-task.js`, expected: "2b559bb11f0285072722cffbb7f322756c81aec867f6fb4a683278f075d7f783" },
+        { path: `${AGENT}/packages/piomo-agent-coordination-mod/dist/extension.js`, expected: "6035ef1aef60e706bf8fa52a7f6b7946a6c0616d6030f38740bdec31d13bb68e" },
+        { path: `${OVERLAY}/plugin/extensions/omo-task.js`, expected: "c2269e2887348e6b40cfdf6be5fd14d594f09342a5fa827e839c647ab475e69c" },
+        { path: `${GLOBAL_OMO}/plugin/extensions/omo-task.js`, expected: "c2269e2887348e6b40cfdf6be5fd14d594f09342a5fa827e839c647ab475e69c" },
       ],
-      extras: ["adapter=generated(2b559bb1)"],
+      extras: ["adapter=generated(c2269e28, omo 5.1.40)"],
     },
     {
       name: "task-record-publish-retry",
@@ -766,6 +825,7 @@ export function makeRows() {
         { path: `${AGENT}/extensions/early-compaction.js`, expected: "c0416e2a5896961d1ee97925a74e788fbeba13a4deb0b69dc2312279706f740a" },
       ],
       extras: ["build=bun-run-build(dist gitignored)"],
+      qualified: `${AGENT}/early-compaction/qualified.json`,
     },
     {
       name: "senpi-freeze-fix",
@@ -778,7 +838,19 @@ export function makeRows() {
         `${HERE}/senpi-freeze-fix/baselines.json`,
         `${HERE}/senpi-freeze-fix/unc-timeout-predicate.mjs`,
       ],
-      freeze: true,
+      senpiPatch: { dir: "senpi-freeze-fix", backupSuffix: ".freeze-fix.bak", files: FREEZE_FILES },
+      installed: [],
+    },
+    {
+      name: "senpi-stream-hash-leak",
+      hint: "tracked",
+      location: "custom-layer/senpi-stream-hash-leak",
+      repoPath: ORCH,
+      sourceFiles: [
+        `${HERE}/senpi-stream-hash-leak/patch.mjs`,
+        `${HERE}/senpi-stream-hash-leak/probe.mjs`,
+      ],
+      senpiPatch: { dir: "senpi-stream-hash-leak", backupSuffix: ".leak-fix.bak", files: LEAK_FILES },
       installed: [],
     },
     // Rows below are not package patches. They are the other active custom items an update
@@ -864,22 +936,22 @@ export function makeRows() {
       hint: "tracked",
       location: "custom-layer/stable-500-launcher",
       repoPath: ORCH,
-      captured: ["omo.cmd", "omo-memory-selector-entry-r21.mjs", "manifest.json", "README.md"],
+      captured: ["omo.cmd", "omo-memory-selector-entry-r22.mjs", "manifest.json", "README.md"],
       capturedExpected: {
-        "omo.cmd": "3dfa490f26846fa4672478f1401722cd1015098c78bd6edb55c96116efbb6caa",
-        "omo-memory-selector-entry-r21.mjs": "fccd1841b044aa908121c784a536f66fc74ee9535aa162f2731e50b35c6aeff7",
-        "manifest.json": "15177e17f64e9a7f8bdcc5abaf3d8aacfc6a6a39d01bf7894ac4039221d7a177",
+        "omo.cmd": "cb11f16fb763c6e5b66b774dec00451dca0cac4454b2649a1b5339db5fc65fca",
+        "omo-memory-selector-entry-r22.mjs": "7a474fe99574caa78d53c025d59c55b4f1814940f4a4e045153580656a745849",
+        "manifest.json": "7a67e6b96c257ea4aad2487a9ddcd25e53b908ba147ab9f6164d5975d346f096",
       },
       installed: [
-        { path: `${LANE}/omo.cmd`, expected: "3dfa490f26846fa4672478f1401722cd1015098c78bd6edb55c96116efbb6caa" },
-        { path: `${LANE}/staging/omo-memory-selector-entry-r21.mjs`, expected: "fccd1841b044aa908121c784a536f66fc74ee9535aa162f2731e50b35c6aeff7" },
-        { path: `${LANE}/staging/memory-rollback-5.1.38-r1/gate.mjs`, expected: "5c74e89b8b47f9108d5a974f3b41960ff7c3896d25cc46d8d8663b188a02479c" },
-        { path: `${LANE}/staging/memory-rollback-5.1.38-r1/manifest.json`, expected: "15177e17f64e9a7f8bdcc5abaf3d8aacfc6a6a39d01bf7894ac4039221d7a177" },
+        { path: `${LANE}/omo.cmd`, expected: "cb11f16fb763c6e5b66b774dec00451dca0cac4454b2649a1b5339db5fc65fca" },
+        { path: `${LANE}/staging/omo-memory-selector-entry-r22.mjs`, expected: "7a474fe99574caa78d53c025d59c55b4f1814940f4a4e045153580656a745849" },
+        { path: `${LANE}/staging/memory-rollback-5.1.40-r1/gate.mjs`, expected: "19f1fb535faac06d2b971e8c06713c9ae24e0ad5a4dadd13a504119d0e456fda" },
+        { path: `${LANE}/staging/memory-rollback-5.1.40-r1/manifest.json`, expected: "7a67e6b96c257ea4aad2487a9ddcd25e53b908ba147ab9f6164d5975d346f096" },
       ],
       pins: [
         { label: "omo.cmd", file: `${LANE}/omo.cmd`, omo: /^set "OMO_STABLE_PINNED_OMO=([^"]+)"/m, senpi: /^set "OMO_STABLE_PINNED_SENPI=([^"]+)"/m },
-        { label: "reentry", file: `${LANE}/staging/omo-memory-selector-entry-r21.mjs`, omo: /^const PINNED_OMO = "([^"]+)"/m, senpi: /^const PINNED_SENPI = "([^"]+)"/m },
-        { label: "manifest", file: `${LANE}/staging/memory-rollback-5.1.38-r1/manifest.json`, json: true },
+        { label: "reentry", file: `${LANE}/staging/omo-memory-selector-entry-r22.mjs`, omo: /^const PINNED_OMO = "([^"]+)"/m, senpi: /^const PINNED_SENPI = "([^"]+)"/m },
+        { label: "manifest", file: `${LANE}/staging/memory-rollback-5.1.40-r1/manifest.json`, json: true },
       ],
       manual: ["after an approved update, launch probes through omo.cmd and the reentry select the intended home and plugin"],
     },
@@ -1043,6 +1115,41 @@ function evaluateRow(row, opts) {
 
   if (out.manual.length) out.extras.push(`manual=${out.manual.length}`);
 
+  if (row.omoPatch) {
+    for (const [tag, root] of [["overlay", OVERLAY], ["global", GLOBAL_OMO]]) {
+      const patch = runJsonLine(process.execPath,
+        [`${HERE}/plan-review-unlock/patch.mjs`, "--omo-root", root, "--check"], "CHECK");
+      const probe = runJsonLine(process.execPath,
+        [`${HERE}/plan-review-unlock/probe.mjs`, "--omo-root", root], "PROBE");
+      const patched = patch.supported === true &&
+        Object.values(patch.files || {}).length === 1 &&
+        Object.values(patch.files).every((file) => file.state === "patched");
+      const fixed = probe.verdict === "defect-absent";
+      out.extras.push(`plan-gate[${tag}]=${probe.error || probe.verdict || "unknown"}`);
+      out.installed.push({
+        status: patched && fixed ? "ok" : "drift",
+        label: `plan-review-unlock:${tag}`,
+        actual: patch.error || JSON.stringify(patch.files || {}),
+        expected: "patched; explicit review after execution allowed",
+      });
+    }
+  }
+
+  // A mod that gates itself on qualified senpi versions is dormant on an unlisted version.
+  if (row.qualified) {
+    const installedSenpi = readVersion(SENPI);
+    let versions = [];
+    try {
+      versions = Object.keys(JSON.parse(fs.readFileSync(row.qualified, "utf8")).versions ?? {});
+    } catch {
+      // reported below as not qualified
+    }
+    out.extras.push(`qualified=${versions.join(",") || "none"}`);
+    if (!installedSenpi || !versions.includes(installedSenpi)) {
+      out.unverified.push(`qualified.json does not list the installed senpi ${installedSenpi ?? "(unreadable)"}; the mod is dormant until requalified`);
+    }
+  }
+
   if (row.name === "task-record-publish-retry" && out.installed[0]) {
     const actual = out.installed[0].actual;
     out.extras.push(
@@ -1058,34 +1165,38 @@ function evaluateRow(row, opts) {
     );
   }
 
-  if (row.freeze) {
-    const patchScript = `${HERE}/senpi-freeze-fix/patch.mjs`;
-    const probeScript = `${HERE}/senpi-freeze-fix/probe.mjs`;
-    const check = runJsonLine(process.execPath, [patchScript, "--senpi-root", opts.senpiRoot, "--check"], "CHECK");
-    out.extras.push(`patch-check=${check.error ? `error(${check.error})` : check.version ? check.files ? summarizePatchCheck(check) : check.version : "unknown"}`);
+  if (row.senpiPatch) {
+    const { dir, backupSuffix, files } = row.senpiPatch;
+    const patchScript = `${HERE}/${dir}/patch.mjs`;
+    const probeScript = `${HERE}/${dir}/probe.mjs`;
+    const roots = [
+      { tag: "install", root: opts.senpiRoot, live: false },
+      ...runtimeRoots(opts.agentDir).map((root) => ({ tag: `runtime:${path.basename(root).slice(0, 8)}`, root, live: true })),
+    ];
+    for (const { tag, root, live } of roots) {
+      const check = runJsonLine(process.execPath, [patchScript, "--senpi-root", root, "--check"], "CHECK");
+      const summary = check.error ? `error(${check.error})` : check.files ? summarizePatchCheck(check) : "unknown";
+      out.extras.push(`patch-check[${tag}]=${summary}`);
 
-    const probe = runJsonLine(process.execPath, [probeScript, "--senpi-root", opts.senpiRoot], "PROBE");
-    out.extras.push(`probe=${probe.error ? `error(${probe.error})` : probe.verdict}`);
+      const probe = runJsonLine(process.execPath, [probeScript, "--senpi-root", root], "PROBE");
+      out.extras.push(`probe[${tag}]=${probe.error ? `error(${probe.error})` : probe.verdict}`);
 
-    const backups = FREEZE_FILES.filter((rel) => fs.existsSync(`${opts.senpiRoot}/${rel}.freeze-fix.bak`));
-    if (backups.length) {
-      const fromBackups = runJsonLine(
-        process.execPath,
-        [probeScript, "--senpi-root", opts.senpiRoot, "--from-backups"],
-        "PROBE",
-      );
-      out.extras.push(`probe-backups=${fromBackups.error ? `error(${fromBackups.error})` : fromBackups.verdict}`);
+      if (files.some((rel) => fs.existsSync(`${root}/${rel}${backupSuffix}`))) {
+        const fromBackups = runJsonLine(process.execPath, [probeScript, "--senpi-root", root, "--from-backups"], "PROBE");
+        out.extras.push(`probe-backups[${tag}]=${fromBackups.error ? `error(${fromBackups.error})` : fromBackups.verdict}`);
+      }
+
+      // The install only has to be recognized (pristine or patched). A runtime snapshot is
+      // what sessions execute, so it must be patched for the fix to be live.
+      const recognized = !check.error && check.files && Object.values(check.files).every((f) => f.state === "pristine" || f.state === "patched");
+      const ok = live ? recognized && summary === "patched" : recognized;
+      out.installed.push({
+        status: ok ? "ok" : "drift",
+        label: `${row.name}:${tag}`,
+        actual: check.error ? check.error : summary,
+        expected: live ? "patched" : "pristine|patched",
+      });
     }
-
-    // The four dist files are managed by patch.mjs, so the row is clean only when
-    // the check recognizes every file (pristine or patched) and not unsupported.
-    const patchOk = !check.error && check.files && Object.values(check.files).every((f) => f.state === "pristine" || f.state === "patched");
-    out.installed.push({
-      status: patchOk ? "ok" : "drift",
-      label: "senpi-freeze-fix:patch-check",
-      actual: check.error ? check.error : check.version,
-      expected: "pristine|patched",
-    });
   }
 
   return out;

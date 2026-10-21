@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "note": "pristine sha256 = installed senpi 2026.10.19; patched sha256 = patch.mjs --apply output on a scratch copy of the same dist. Regenerate both with the Update-time procedure in README.md.",
+  "note": "pristine sha256 = extracted upstream tarball bytes; patched sha256 = patch.mjs --apply output on a scratch copy of the same dist. 2026.10.19 is the installed build (its .freeze-fix.bak files supplied the pristine bytes); 2026.10.19-2 comes from senpi-2026.10.19-2.tgz sha256 c9debe5f5a1c7ac20eb0106326e7394bbe580bf239e97b47286eb27d020405f8. Regenerate both with the Update-time procedure in README.md.",
   "versions": {
     "2026.10.19": {
       "files": {
@@ -19,6 +19,26 @@
         "dist/bundle/chunks/session-worker.js": {
           "pristine": "3f841c9ffb85f31407b6cff21ad0050ad1318fba4a7245b5ed571e3595b5a80d",
           "patched": "eacfaa008f45cdf424efe958899d040363e425fd573e3cdf50f4bf555e91f832"
+        }
+      }
+    },
+    "2026.10.19-2": {
+      "files": {
+        "dist/core/extensions/builtin/moved-path-guard/command-paths.js": {
+          "pristine": "0639b32fb3b4249d452b73444b7e6f0a9c702df0da1a1622595198e7db1b51a2",
+          "patched": "7450f9cb11480e02c27e3511cc941ae3ae65c3d02ed1de119c28745cd2127adb"
+        },
+        "dist/core/tools/filesystem-policy.js": {
+          "pristine": "d04f4fe3705a3053652bf545f1b7a77062a7bd9e5e1b2d88de3d531d80b42ede",
+          "patched": "d6b9d4134e50524286b571281ed94727109b668b709bae09ac6cd9a6b5670da8"
+        },
+        "dist/bundle/chunks/chunk-F4ZU4RBE.js": {
+          "pristine": "62a80a1baceb1d99ec76369512228198733198e2946fe3a71f1f469333aaed48",
+          "patched": "f2df0732cc187d2dd510d6dda661f4d2cb1bc002b26706e8fd9e2c44daa1e6f0"
+        },
+        "dist/bundle/chunks/session-worker.js": {
+          "pristine": "79dd79853af47d9096c4b4057f01272b05943b55b57b5cdb5d3b4f8d8b8b1037",
+          "patched": "f07b3e840c7d678a94a818348a15b17a89e4e14d84b0dd0d03cfc5c29e5fcf2c"
         }
       }
     }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// R21 memory-rollback-5.1.38-r1: custom package overlay; previous comments are historical.
-// R21 CUTOVER pins: omo-ai 5.1.38 / senpi 2026.10.19; ACTIVE after verified byte-preserving activation; earlier comments below are historical.
+// R22 memory-rollback-5.1.40-r1: custom package overlay; previous comments are historical.
+// R22 CUTOVER pins: omo-ai 5.1.40 / senpi 2026.10.19-2; ACTIVE after verified byte-preserving activation; earlier comments below are historical.
 // omo-memory-selector-entry-r18.mjs — 5.1.4 cutover re-entry (stock 5.1.4 plugin, 2026-09-30).
 // Companion to staging/omo-memory-selector-candidate-r3.cmd. Successor to
 // entry-r2: same lane guard, same read-only prep/version gate, same
@@ -36,7 +36,7 @@ import { createHash } from "node:crypto"
 import { pathToFileURL } from "node:url"
 
 const LANE = "C:\\Users\\USER\\.omo-stable-500"
-const STOCK_PLUGIN = "C:\\Users\\USER\\.omo-stable-500\\staging\\memory-rollback-5.1.38-r1\\package\\plugin"
+const STOCK_PLUGIN = "C:\\Users\\USER\\.omo-stable-500\\staging\\memory-rollback-5.1.40-r1\\package\\plugin"
 const CHG = "C:\\Users\\USER\\.bun\\install\\global\\node_modules\\omo-ai\\CHANGELOG.md"
 const MODULES = "C:\\Users\\USER\\.bun\\install\\global\\node_modules"
 const OMO_PKG = `${MODULES}\\omo-ai\\package.json`
@@ -45,11 +45,11 @@ const STAMP = `${MODULES}\\@code-yeongyu\\senpi\\.omo-engine-prepared`
 const BUNDLE = `${MODULES}\\@code-yeongyu\\senpi\\dist\\bundle\\cli.js`
 const FALLBACK_CLI = `${MODULES}\\@code-yeongyu\\senpi\\dist\\cli.js`
 const BRAND_JS = `${MODULES}\\@code-yeongyu\\senpi\\dist\\core\\brand.js`
-const STOCK_ENTRY = "C:\\Users\\USER\\.omo-stable-500\\staging\\memory-rollback-5.1.38-r1\\package\\bin\\omo.js"
+const STOCK_ENTRY = "C:\\Users\\USER\\.omo-stable-500\\staging\\memory-rollback-5.1.40-r1\\package\\bin\\omo.js"
 const STOCK_ENTRY_PLUGIN = `${STOCK_PLUGIN}\\extensions\\omo.js`
 const BIN_DIR = `${MODULES}\\.bin`
-const PINNED_OMO = "5.1.38"
-const PINNED_SENPI = "2026.10.19"
+const PINNED_OMO = "5.1.40"
+const PINNED_SENPI = "2026.10.19-2"
 const UPDATE_CMD = "bun add -g omo-ai"
 const GUARDED = ["OMO_CODING_AGENT_DIR", "SENPI_CODING_AGENT_DIR", "PI_CODING_AGENT_DIR", "OMO_CODING_AGENT_SESSION_DIR", "SENPI_CODING_AGENT_SESSION_DIR", "OMO_LSP_DAEMON_DIR", "OMO_LSP_DAEMON_CLI", "OMO_PACKAGE_DIR", "SENPI_PACKAGE_DIR", "PI_PACKAGE_DIR"]
 const CLEARED = ["OMO_LSP_DAEMON_VERSION", "PI_SESSION_FILE", "PI_SESSION_ID", "PI_SESSION_CWD", "OMO_AGENT_TOOLKIT_SDK_ROOT", "OMO_DAG_SDK_ROOT", "OMO_PACKAGE_DIR", "SENPI_PACKAGE_DIR", "PI_PACKAGE_DIR"]
@@ -91,10 +91,10 @@ if (new Set(["setup","update","install","remove","list","config","auth"]).has(pr
   await new Promise((resolve) => child.once('close', resolve))
   process.exit(process.exitCode ?? 0)
 }
-const memoryOverlayGate = "C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.38-r1/gate.mjs"
+const memoryOverlayGate = "C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.40-r1/gate.mjs"
 try {
-  if (createHash("sha256").update(readFileSync(memoryOverlayGate)).digest("hex") !== "5c74e89b8b47f9108d5a974f3b41960ff7c3896d25cc46d8d8663b188a02479c") fail(2, "MEMORY_OVERLAY_GATE_DIGEST", memoryOverlayGate)
-  await (await import(pathToFileURL(memoryOverlayGate).href)).verifyPayload("15177e17f64e9a7f8bdcc5abaf3d8aacfc6a6a39d01bf7894ac4039221d7a177")
+  if (createHash("sha256").update(readFileSync(memoryOverlayGate)).digest("hex") !== "19f1fb535faac06d2b971e8c06713c9ae24e0ad5a4dadd13a504119d0e456fda") fail(2, "MEMORY_OVERLAY_GATE_DIGEST", memoryOverlayGate)
+  await (await import(pathToFileURL(memoryOverlayGate).href)).verifyPayload("7a67e6b96c257ea4aad2487a9ddcd25e53b908ba147ab9f6164d5975d346f096")
 } catch (e) { fail(2, "MEMORY_OVERLAY_GATE", e instanceof Error ? e.message : String(e)) }
 // --- lane environment shared by both branches (pinned + cleared only) ---
 function laneEnvBase() {

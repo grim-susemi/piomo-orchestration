@@ -10,6 +10,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { EDITS, transformText } from "../plan-review-unlock/patch.mjs";
 import {
   STATES,
   aggregate,
@@ -23,6 +24,7 @@ import {
   parseLedger,
   parseRevCount,
   pinConsistency,
+  runtimeRoots,
   sha256File,
   strictVerdict,
   treeHash,
@@ -304,6 +306,36 @@ test("CLI: default run exits 0 on drift, --strict fails it, an --only run never 
     assert.equal(partialDoc.verdict.verdict, "incomplete");
     assert.equal(partial.status, 3);
     assert.ok(partialDoc.verdict.unverified.some((line) => line.includes("--only run")));
+  } finally {
+    fs.rmSync(agent, { recursive: true, force: true });
+  }
+});
+
+test("installed baseline accepts only the exact managed plan-review delta", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "check-plan-delta-"));
+  try {
+    const file = path.join(dir, "omo-task.js");
+    const original = `${EDITS.map((edit) => edit.anchor).join("\n")}\n// unrelated\n`;
+    fs.writeFileSync(file, original);
+    const baseline = sha256File(file);
+    fs.writeFileSync(file, transformText(original));
+    assert.equal(checkInstalled(file, baseline).status, "ok");
+    assert.equal(checkInstalled(file, baseline).normalizedBy, "plan-review-unlock");
+    fs.appendFileSync(file, "// unrelated corruption\n");
+    assert.equal(checkInstalled(file, baseline).status, "drift");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("runtimeRoots lists only snapshot directories that carry runtime-snapshot.json", () => {
+  const agent = fs.mkdtempSync(path.join(os.tmpdir(), "check-patches-agent-"));
+  try {
+    assert.deepEqual(runtimeRoots(agent), []);
+    fs.mkdirSync(path.join(agent, "runtime", "aaaa-1111"), { recursive: true });
+    fs.writeFileSync(path.join(agent, "runtime", "aaaa-1111", "runtime-snapshot.json"), "{}");
+    fs.mkdirSync(path.join(agent, "runtime", ".tmp-bbbb-1111-42"), { recursive: true });
+    assert.deepEqual(runtimeRoots(agent), [path.join(agent, "runtime", "aaaa-1111")]);
   } finally {
     fs.rmSync(agent, { recursive: true, force: true });
   }

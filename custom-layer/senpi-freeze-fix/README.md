@@ -1,7 +1,7 @@
 # senpi-freeze-fix
 
-A managed anchor patch for senpi `2026.10.19` that removes the two causes of the
-12-22 s session freeze described in
+A managed anchor patch for senpi `2026.10.19` and `2026.10.19-2` that removes
+the two causes of the 12-22 s session freeze described in
 `.omo/plans/research-session-freeze-fix.md` (IS-1, D1, D2).
 
 The patch is applied to the installed package, never to a fork:
@@ -19,8 +19,14 @@ inline them):
 | --- | --- |
 | `dist/core/extensions/builtin/moved-path-guard/command-paths.js` | `embeddedPaths` skips a `//...` match whose preceding text ends in `scheme:`; the `commandPaths` words loop skips `scheme://...` words |
 | `dist/core/tools/filesystem-policy.js` | inserts `omoFreezeFixUncTimeout`; after the bounded resolver times out, an ordinary UNC path throws `ETIMEDOUT` (with `omoFreezeFix: true`) instead of entering the synchronous fallback walker |
-| `dist/bundle/chunks/chunk-35M5MVUZ.js` | both edits, minified identifiers |
+| `dist/bundle/chunks/chunk-35M5MVUZ.js` (2026.10.19) | both edits, minified identifiers |
+| `dist/bundle/chunks/chunk-F4ZU4RBE.js` (2026.10.19-2) | both edits, minified identifiers |
 | `dist/bundle/chunks/session-worker.js` | both edits, minified identifiers |
+
+Each supported version names its own bundle chunk and minified locals in
+`BUNDLE_SHAPES` (`patch.mjs`); `filesFor(version)` returns that version's four
+paths. The `2026.10.19` entry is the original byte-exact anchor set and emits
+the same patched bytes as before.
 
 `utils/paths.js` and `chunk-G3ZEPNGM.js` hold `realpathWithoutOpenStrict` and are
 deliberately unchanged: the fix sits at the caller. ReFS device paths (`\\?\`),
@@ -47,8 +53,8 @@ node patch.mjs --senpi-root <dir> --remove [--receipt <file>]
 # defect probe on a temp copy of <dir>/dist
 node probe.mjs --senpi-root <dir> [--from-backups]
 
-# tests
-node --test test/*.test.mjs
+# tests (the 19-2 cases need an extracted pristine tree)
+SENPI_19_2_ROOT=<extracted 2026.10.19-2> node --test test/*.test.mjs
 ```
 
 Exit codes: `0` success/no-op; `2` unsupported version, unknown file, or unknown
@@ -72,11 +78,13 @@ answers "what does the pre-patch tree look like" without touching the install.
 
 For every supported version and targeted file it stores two sha256 values:
 
-- `pristine`: the installed upstream bytes;
+- `pristine`: the installed or extracted upstream bytes;
 - `patched`: the output of `--apply` on a scratch copy of those same bytes.
 
 The `patched` hash is what makes a second `--apply` a no-op and what makes
-`--check` distinguish `patched` from `unknown`.
+`--check` distinguish `patched` from `unknown`. `2026.10.19-2` was derived from
+`senpi-2026.10.19-2.tgz` (sha256 `c9debe5f...0405f8`); its two unbundled files are
+byte-identical to 2026.10.19 and only the bundles changed.
 
 ## Re-deriving the anchors at an update
 

@@ -1,5 +1,5 @@
-@rem R21 memory-rollback-5.1.38-r1 overlay; active for NEW launches; earlier comments are historical.
-@rem R21 CUTOVER pins: omo-ai 5.1.38 / senpi 2026.10.19; ACTIVE after verified byte-preserving activation; earlier comments below are historical.
+@rem R22 memory-rollback-5.1.40-r1 overlay; active for NEW launches; earlier comments are historical.
+@rem R22 CUTOVER pins: omo-ai 5.1.40 / senpi 2026.10.19-2; ACTIVE after verified byte-preserving activation; earlier comments below are historical.
 @echo off
 rem ===========================================================================
 rem omo-memory-selector-candidate-r5 (5.1.4 CUTOVER 2026-09-30: stock 5.1.4 plugin)
@@ -72,18 +72,18 @@ setlocal EnableExtensions DisableDelayedExpansion
 
 set "OMO_STABLE_ROOT=C:\Users\USER\.omo-stable-500"
 set "OMO_STABLE_NODE=C:\Users\USER\AppData\Roaming\npm\node.exe"
-set "OMO_STABLE_ENTRY=C:\Users\USER\.omo-stable-500\staging\memory-rollback-5.1.38-r1\package\bin\omo.js"
+set "OMO_STABLE_ENTRY=C:\Users\USER\.omo-stable-500\staging\memory-rollback-5.1.40-r1\package\bin\omo.js"
 set "OMO_STABLE_HOME=%OMO_STABLE_ROOT%\home"
 set "OMO_STABLE_AGENT=%OMO_STABLE_HOME%\.omo\agent"
 set "OMO_STABLE_R2=C:\Users\USER\.omo-stable-500\staging\memory-selector-v5.0.0-r2"
-set "OMO_STABLE_PLUGIN=C:\Users\USER\.omo-stable-500\staging\memory-rollback-5.1.38-r1\package\plugin"
+set "OMO_STABLE_PLUGIN=C:\Users\USER\.omo-stable-500\staging\memory-rollback-5.1.40-r1\package\plugin"
 set "OMO_STABLE_R2_ENTRY=%OMO_STABLE_R2%\extensions\omo.js"
 set "OMO_STABLE_SENPI_BUNDLE=C:\Users\USER\.bun\install\global\node_modules\@code-yeongyu\senpi\dist\bundle\cli.js"
 set "OMO_STABLE_SENPI_FALLBACK=C:\Users\USER\.bun\install\global\node_modules\@code-yeongyu\senpi\dist\cli.js"
 set "OMO_STABLE_SENPI_BIN_DIR=C:\Users\USER\.bun\install\global\node_modules\.bin"
-set "OMO_STABLE_REENTRY=C:\Users\USER\.omo-stable-500\staging\omo-memory-selector-entry-r21.mjs"
-set "OMO_STABLE_PINNED_OMO=5.1.38"
-set "OMO_STABLE_PINNED_SENPI=2026.10.19"
+set "OMO_STABLE_REENTRY=C:\Users\USER\.omo-stable-500\staging\omo-memory-selector-entry-r22.mjs"
+set "OMO_STABLE_PINNED_OMO=5.1.40"
+set "OMO_STABLE_PINNED_SENPI=2026.10.19-2"
 
 if not exist "%OMO_STABLE_NODE%" (
   echo OMO_STABLE_PINNED_NODE_MISSING %OMO_STABLE_NODE% 1>&2
@@ -134,7 +134,7 @@ if "%~1"=="--help" if "%~2"=="" goto :upstream_maintenance
 if "%~1"=="-h" if "%~2"=="" goto :upstream_maintenance
 if "%~1"=="--list-tips" if "%~2"=="" goto :upstream_maintenance
 if not defined UV_THREADPOOL_SIZE set "UV_THREADPOOL_SIZE=16" & rem D4          
-"%OMO_STABLE_NODE%" -e "const f='C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.38-r1/gate.mjs';if(require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync(f)).digest('hex')!=='5c74e89b8b47f9108d5a974f3b41960ff7c3896d25cc46d8d8663b188a02479c'){console.error('MEMORY_OVERLAY_GATE_DIGEST');process.exit(2);}import(require('node:url').pathToFileURL(f).href).then(m=>m.verifyPayload('15177e17f64e9a7f8bdcc5abaf3d8aacfc6a6a39d01bf7894ac4039221d7a177')).catch(e=>{console.error('MEMORY_OVERLAY_GATE '+e.message);process.exitCode=2;});"
+"%OMO_STABLE_NODE%" -e "const f='C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.40-r1/gate.mjs';if(require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync(f)).digest('hex')!=='19f1fb535faac06d2b971e8c06713c9ae24e0ad5a4dadd13a504119d0e456fda'){console.error('MEMORY_OVERLAY_GATE_DIGEST');process.exit(2);}import(require('node:url').pathToFileURL(f).href).then(m=>m.verifyPayload('7a67e6b96c257ea4aad2487a9ddcd25e53b908ba147ab9f6164d5975d346f096')).catch(e=>{console.error('MEMORY_OVERLAY_GATE '+e.message);process.exitCode=2;});"
 if errorlevel 1 (
   endlocal & exit /b 2
 )
@@ -186,7 +186,7 @@ rem extensions (incl. omo-model-tuning.ts) all loaded with zero conflicts.
 rem Single-ownership is loader evidence, not a token count.
 set "SENPI_BIN="
 set "OMO_BIN="
-set "OMO_STABLE_BRAND={"name":"OmO","command":"omo","displayVersion":"5.1.38","configDir":".omo","flatLayout":false,"envPrefix":"OMO","userAgent":"omo","originator":"omo","changelog":{"path":"C:\\Users\\USER\\.bun\\install\\global\\node_modules\\omo-ai\\CHANGELOG.md","version":"5.1.38"},"update":{"packageName":"omo-ai","distTag":"latest","command":"bun add -g omo-ai","changelogUrl":"https://github.com/code-yeongyu/oh-my-openagent/releases"}}"
+set "OMO_STABLE_BRAND={"name":"OmO","command":"omo","displayVersion":"5.1.40","configDir":".omo","flatLayout":false,"envPrefix":"OMO","userAgent":"omo","originator":"omo","changelog":{"path":"C:\\Users\\USER\\.bun\\install\\global\\node_modules\\omo-ai\\CHANGELOG.md","version":"5.1.40"},"update":{"packageName":"omo-ai","distTag":"latest","command":"bun add -g omo-ai","changelogUrl":"https://github.com/code-yeongyu/oh-my-openagent/releases"}}"
 set "SENPI_BRAND=%OMO_STABLE_BRAND%"
 set "OMO_NATIVE=1"
 set "SENPI_RUNTIME=node"

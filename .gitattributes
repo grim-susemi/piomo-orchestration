@@ -10,3 +10,6 @@ provenance/allowlist.json text eol=lf
 custom-layer/memory-overlay/omo.js -text
 custom-layer/stable-500-launcher/** -text
 custom-layer/memory-overlay/build/** -text
+custom-layer/senpi-freeze-fix/** text eol=lf
+custom-layer/senpi-stream-hash-leak/** text eol=lf
+custom-layer/plan-review-unlock/** text eol=lf

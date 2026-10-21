@@ -2,9 +2,9 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 
-const project = "C:/Users/USER/orca/projects/piomo-memory-rollback-5.1.38";
+const project = "C:/Users/USER/orca/projects/piomo-memory-rollback-5.1.40";
 const wrapper = "C:/Users/USER/.omo-stable-500/omo.cmd";
-const entry = "C:/Users/USER/.omo-stable-500/staging/omo-memory-selector-entry-r21.mjs";
+const entry = "C:/Users/USER/.omo-stable-500/staging/omo-memory-selector-entry-r22.mjs";
 const probe = `${project}/test/launch-probe.mjs`;
 const env = { ...process.env };
 for (const name of [
@@ -42,6 +42,6 @@ async function runProbe(kind, receipt) {
 }
 
 const results = [];
-results.push(await runProbe("cmd", `${project}/evidence/live-launch-cmd-r21.json`));
-results.push(await runProbe("reentry", `${project}/evidence/live-launch-reentry-r21.json`));
-console.log("LIVE_VALIDATE_R21_PASS " + JSON.stringify(results));
+results.push(await runProbe("cmd", `${project}/evidence/live-launch-cmd-r22.json`));
+results.push(await runProbe("reentry", `${project}/evidence/live-launch-reentry-r22.json`));
+console.log("LIVE_VALIDATE_R22_PASS " + JSON.stringify(results));

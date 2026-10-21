@@ -5,7 +5,7 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 import { omoFreezeFixUncTimeout } from "../unc-timeout-predicate.mjs";
-import { buildTargets } from "../patch.mjs";
+import { buildTargets, KNOWN_VERSIONS } from "../patch.mjs";
 
 const PREDICATE_PATH = fileURLToPath(
   new URL("../unc-timeout-predicate.mjs", import.meta.url)
@@ -60,13 +60,15 @@ test("the imported predicate is the text the patcher embeds", async () => {
   }
 
   const expectedSource = PREDICATE_TEXT.replace(/^export /m, "").trim();
-  const targets = await buildTargets();
-  const policy = targets.find((target) =>
-    target.file.endsWith("dist/core/tools/filesystem-policy.js")
-  );
-  assert.ok(policy, "filesystem-policy target is missing");
-  assert.ok(
-    policy.edits.some((edit) => edit.replacement.includes(expectedSource)),
-    "the inserted predicate text differs from unc-timeout-predicate.mjs"
-  );
+  for (const version of KNOWN_VERSIONS) {
+    const targets = await buildTargets(version);
+    const policy = targets.find((target) =>
+      target.file.endsWith("dist/core/tools/filesystem-policy.js")
+    );
+    assert.ok(policy, `filesystem-policy target is missing for ${version}`);
+    assert.ok(
+      policy.edits.some((edit) => edit.replacement.includes(expectedSource)),
+      `the inserted predicate text differs from unc-timeout-predicate.mjs for ${version}`
+    );
+  }
 });

@@ -11,7 +11,7 @@ export async function verifyPayload(expectedManifestSha, root = path.dirname(fil
   const raw = await readFile(path.join(root, "manifest.json"));
   if (digest(raw) !== expectedManifestSha) throw new Error("Overlay manifest digest mismatch");
   const manifest = JSON.parse(raw);
-  if (manifest.omo !== "5.1.38" || manifest.senpi !== "2026.10.19" || manifest.revision !== "memory-rollback-r1") {
+  if (manifest.omo !== "5.1.40" || manifest.senpi !== "2026.10.19-2" || manifest.revision !== "memory-rollback-r1") {
     throw new Error("Unsupported overlay identity");
   }
   const omo = await readJson(`${modules}/omo-ai/package.json`);

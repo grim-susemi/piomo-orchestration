@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { patchBundle, PINS, sha256, VERSION, UPSTREAM, PatchRefused } from "./bundle-patch.mjs";
 
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-export const SOURCE = "C:/Users/USER/.omo-stable-500/staging/upgrade-5.1.38-inspect/pristine-omo-ai";
+export const SOURCE = "C:/Users/USER/.omo-stable-500/staging/upgrade-5.1.40-inspect/pristine-omo-ai";
 export const MODULES = "C:/Users/USER/.bun/install/global/node_modules";
 
 export async function stagePackage(outputRoot) {
@@ -15,7 +15,7 @@ export async function stagePackage(outputRoot) {
   // The overlay is staged BEFORE the global install (its manifest digest is embedded in the
   // new wrapper/reentry candidates), so equality with the installed tree cannot be asserted
   // here. The committed gate.mjs asserts installed bundle bytes == manifest beforeSha256 on
-  // every memory-capable launch, which binds the staged base to the installed 5.1.38 bytes.
+  // every memory-capable launch, which binds the staged base to the installed 5.1.40 bytes.
   const changes = [];
   for (const name of Object.keys(PINS)) {
     const source = await readFile(`${SOURCE}/plugin/extensions/${name}`);

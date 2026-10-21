@@ -1,7 +1,8 @@
 # memory-overlay - provenance
 
-Captured 2026-10-20 from the live R21 generation. This patch has no git repository of
-its own: the build project `C:/Users/USER/orca/projects/piomo-memory-rollback-5.1.38`
+Re-captured 2026-10-22 from the live R22 generation (first captured 2026-10-20 from R21).
+This patch has no git repository of its own: the build project
+`C:/Users/USER/orca/projects/piomo-memory-rollback-5.1.40`
 has `src/`, `test/` and `evidence/` but no `.git`. The files here are the captured
 source of the three installed bundles that differ from stock.
 
@@ -9,19 +10,29 @@ source of the three installed bundles that differ from stock.
 
 | Item | Path / value |
 | --- | --- |
-| Overlay package | `C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.38-r1/package` |
-| Generation manifest sha256 | `15177e17f64e9a7f8bdcc5abaf3d8aacfc6a6a39d01bf7894ac4039221d7a177` |
-| Gate sha256 | `5c74e89b8b47f9108d5a974f3b41960ff7c3896d25cc46d8d8663b188a02479c` |
-| Overlay omo version | 5.1.38 |
-| Senpi version | 2026.10.19 |
-| Stock comparison | `C:/Users/USER/.bun/install/global/node_modules/omo-ai` (5.1.38) |
-| Build project | `C:/Users/USER/orca/projects/piomo-memory-rollback-5.1.38` (`src/stage.mjs`, `src/bundle-patch.mjs`, `src/gate.mjs`; no git) |
+| Overlay package | `C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.40-r1/package` |
+| Generation manifest sha256 | `7a67e6b96c257ea4aad2487a9ddcd25e53b908ba147ab9f6164d5975d346f096` |
+| Gate sha256 | `19f1fb535faac06d2b971e8c06713c9ae24e0ad5a4dadd13a504119d0e456fda` |
+| Overlay omo version | 5.1.40 |
+| Senpi version | 2026.10.19-2 |
+| Stock comparison | official omo-ai 5.1.40 tarball (`a4b11265...`), extracted to `staging/upgrade-5.1.40-inspect/pristine-omo-ai`; equal to the installed global package |
+| Build project | `C:/Users/USER/orca/projects/piomo-memory-rollback-5.1.40` (`src/stage.mjs`, `src/bundle-patch.mjs`, `src/gate.mjs`; no git) |
 
 ## Upstream
 
 - PR: https://github.com/code-yeongyu/oh-my-openagent/pull/10000 (still open on 2026-10-20)
-- PR head: `4406c7776ca6582cc206819fadc1b34a060d4729`
-- PR base at capture: `90ba59d80a16732f3e56892478c42f773105062c`
+- PR head: `dd86ddb7f9fd919ed4921bca2668c0016be7817e` (R21 used `4406c7776ca6582cc206819fadc1b34a060d4729`)
+- PR base at capture: `c2c258d6ea7284b3aeae052fbcee3a5231e0793e`
+
+## R22 rebase note
+
+For 5.1.40 the PR head converts six git call sites to `--literal-pathspecs` (status, restorePaths
+restore/rm, unstage restore/rm, stage add). The commit catch was re-derived from the 5.1.40 bytes in
+the order of commit-write.ts at `dd86ddb7`: `oP` (no effective changes) first, then `vN` stranded lock
+to `vD`, `iP` DirtyRepoError rethrown, then restorePaths, then `lM` MemorySecretError wrapped in `yD`.
+Baseline (defect reproduced) and patched (recovered) native scenarios passed on the isolated
+2026.10.19-2 engine; a new process through `omo.cmd` and the reentry loaded this generation as the
+single `omo.js` owner (`build/test-captured/live-validate-r22.mjs`).
 
 ## R21 rebase note
 
@@ -41,9 +52,9 @@ and is identical in the overlay and the global install.
 
 | Installed file | Size | Overlay sha256 | Stock sha256 | Capture |
 | --- | --- | --- | --- | --- |
-| `plugin/extensions/omo.js` | 1,533,145 B | `4a8aef923825ccd5fbb5ab6d4b3b72e0ae145b670309f1db3ead53827c029476` | `de9603b563e9bca417f431006e0ced5bab0e126dc3b530b5fd1e83c0371cff69` | `omo.js` (byte copy; over 1 MB) |
-| `plugin/extensions/omo-memory-doctor.js` | 184,801 B | `1f4758613c914142864b12cc985213c0aeb4f79e933f12402b61b5ad9aa79b16` | `fb63df01193939faacb3152f802368b7b6fa36a3c4de0df5bdfd02b8f3c3c8a4` | `omo-memory-doctor.diff` |
-| `plugin/extensions/omo-memory-memfs.js` | 68,667 B | `611ec44b91e98abbd1375e24c87b72a033a3de7864c1788ce07e56ad8f0be17e` | `8b40193e6882b3451ffa4b1b879fa7528e5557896191517b4352740b796d6260` | `omo-memory-memfs.diff` |
+| `plugin/extensions/omo.js` | see file | `de8408a08dc84a389316af6f6fc407fa260d129b04748e354e291b104cee8c6c` | `99262013ba80365491acdb1224291f6f41c5b0e1013e07ca605e452ed8c83b19` | `omo.js` (byte copy; over 1 MB) |
+| `plugin/extensions/omo-memory-doctor.js` | see diff | `900cb31eaf81e6b75e188820a0738f4c8943338d5d1cc45841637151b6a3e813` | `cdea5f06ea8b37cd6bd3c3171d24785af747b423f7ea8bd8acf6d53032801bfa` | `omo-memory-doctor.diff` |
+| `plugin/extensions/omo-memory-memfs.js` | see diff | `7f832ed672cad107d7a54c3f6c90edd7275da2af1bf7305b2cefead56a6e3bdc` | `a1c8a81358b7e5f22f323040d5489d13c33d756ee710fa5f5d79187667d33b7b` | `omo-memory-memfs.diff` |
 
 The diffs are `git diff --no-index` output with the overlay copy as `a/` and the
 stock copy as `b/`, so `-` lines are the overlay and `+` lines are stock. Because the
