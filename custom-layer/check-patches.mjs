@@ -862,7 +862,7 @@ export function makeRows() {
     },
     {
       name: "senpi-opencode-compaction-session",
-      hint: "local-commit",
+      hint: "tracked",
       location: "custom-layer/senpi-opencode-compaction-session",
       repoPath: ORCH,
       sourceFiles: [
