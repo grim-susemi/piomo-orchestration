@@ -86,6 +86,15 @@ const LEAK_FILES = [
   "dist/bundle/chunks/session-worker.js",
   "dist/core/extensions/builtin/anthropic-subscription/session-commit-boundary.js",
 ];
+// The compaction session-header patch adds the current bundle chunk plus the
+// two older chunks; only the files that exist in a root are inspected.
+const OPENCODE_SESSION_FILES = [
+  "dist/core/extensions/builtin/compaction/speculative-summary.js",
+  "dist/bundle/chunks/chunk-35M5MVUZ.js",
+  "dist/bundle/chunks/chunk-F4ZU4RBE.js",
+  "dist/bundle/chunks/chunk-BLWWTQZO.js",
+  "dist/bundle/chunks/session-worker.js",
+];
 
 // ---------------------------------------------------------------------------
 // Pure helpers (unit-tested by test/check-patches.test.mjs)
@@ -849,6 +858,23 @@ export function makeRows() {
         `${HERE}/senpi-stream-hash-leak/probe.mjs`,
       ],
       senpiPatch: { dir: "senpi-stream-hash-leak", backupSuffix: ".leak-fix.bak", files: LEAK_FILES },
+      installed: [],
+    },
+    {
+      name: "senpi-opencode-compaction-session",
+      hint: "local-commit",
+      location: "custom-layer/senpi-opencode-compaction-session",
+      repoPath: ORCH,
+      sourceFiles: [
+        `${HERE}/senpi-opencode-compaction-session/patch.mjs`,
+        `${HERE}/senpi-opencode-compaction-session/probe.mjs`,
+        `${HERE}/senpi-opencode-compaction-session/README.ko.md`,
+      ],
+      senpiPatch: {
+        dir: "senpi-opencode-compaction-session",
+        backupSuffix: ".opencode-session.bak",
+        files: OPENCODE_SESSION_FILES,
+      },
       installed: [],
     },
     // Rows below are not package patches. They are the other active custom items an update
