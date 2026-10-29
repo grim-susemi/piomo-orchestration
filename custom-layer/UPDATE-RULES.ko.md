@@ -44,6 +44,24 @@
 
 ## 3. 행별 규칙
 
+### task-owned-work-reclaim-guard (격리 후보만 등록)
+
+현재 미설치·미활성화·미커밋 후보다. 등록 행을 live 적용으로 읽지 않는다.
+설치기는 `os.tmpdir()` 아래 명시 disposable marker를 가진 전용 fixture만 받아들인다.
+공유 경로 설치·기존 대화 갱신은 별도 승인과 조율 전에는 하지 않는다.
+
+업데이트 때 새 공식 task 소스에 읽기 전용 `patch.mjs --check`를 실행한다.
+정확 버전·전체 baseline 해시·여섯 anchor와 결함 재현이 맞으면 reapply 권고,
+이미 후보가 있고 역변환 baseline과 행동이 맞으면 keep, 결함이 남지만 버전·해시가
+다르면 rederive다. 부분 후보나 예상 밖 시나리오 오류는 needs-review를 우선한다.
+공식 소스에 우리 조각이 없고 전체 ownership/control 프로브가 통과한 경우만
+독립 검토 후 retire한다. anchor 부재·버전 번호만으로 은퇴하지 않는다.
+
+기존 coordination 기준 해시를 바꾸지 않는다. owned-work 정확 inverse를 먼저,
+기존 plan-review inverse를 다음에 적용한 전체 원문의 해시만 기존 값과 비교한다.
+이웃 손상은 계속 drift다. adapter 재생성 → plan-review → owned-work 순서로 관리한다.
+fixture 검증·등록 완료·디스크 적용·새 process 로드·실제 runtime 수용은 각각 별도다.
+
 ### memory-overlay (R19 → R21 메모리 거래 원복)
 
 원본 글로벌 번들을 직접 고치지 않는다. 다음 업데이트 때:

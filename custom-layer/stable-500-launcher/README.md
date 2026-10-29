@@ -1,5 +1,7 @@
 # stable-500 launcher (captured)
 
+**Current (R24, 2026-10-28):** omo-ai 5.1.48 / senpi 2026.10.25-2. `omo.cmd` sha256 `0ee28b70c27696affb8656a9b1f4bee7e799b1f9b4b9e934a498b70ca63fd8ea`, `omo-memory-selector-entry-r24.mjs` `9632e8cb043b740fbaaffa89a873f09b5864c0c3af97b59c7e198e4c9e681f74`, overlay `manifest.json` `f84bdb69ea293b89c5d76bcece05db0e267532208619b05f67fb2d8a29c5e002` (generation `memory-rollback-5.1.48-r1`). The table below is the older R22 record; the r22/r23 entry copies are kept as history.
+
 Reference copies of the files that select the live omo/senpi pair and the memory
 overlay generation. Captured 2026-10-21 (R21), re-captured 2026-10-22 after the R22 cutover. Before the first capture the launcher existed only
 in the lane (`docs/current-state.md` listed it as metadata-only).

@@ -21,8 +21,10 @@ import { performance } from "node:perf_hooks";
 const CHUNK_BY_VERSION = {
   "2026.10.19": "dist/bundle/chunks/chunk-35M5MVUZ.js",
   "2026.10.19-2": "dist/bundle/chunks/chunk-F4ZU4RBE.js",
+  "2026.10.21-3": "dist/bundle/chunks/chunk-BLWWTQZO.js",
+  "2026.10.25-2": "dist/bundle/chunks/chunk-J2U5VDG7.js",
 };
-const NEWEST_VERSION = "2026.10.19-2";
+const NEWEST_VERSION = "2026.10.25-2";
 
 function filesFor(version) {
   return [
@@ -63,7 +65,9 @@ export async function behavioralProbe(senpiRoot) {
   const clean = commitBoundary.commit("k", big, model);
   commitBoundary.captureProviderFinal("k", message("before"));
   const rewritten = commitBoundary.commit("k", message("after"), model);
-  return { msPerCall: Number(msPerCall.toFixed(3)), clean, rewritten, semanticsOk: clean === "clean" && rewritten === "rewritten" };
+  const cleanOk = clean === "clean" || clean?.outcome === "clean";
+  const rewrittenOk = rewritten === "rewritten" || rewritten?.outcome === "rewritten";
+  return { msPerCall: Number(msPerCall.toFixed(3)), clean, rewritten, semanticsOk: cleanOk && rewrittenOk };
 }
 
 export function verdictOf(statics, behavioral) {

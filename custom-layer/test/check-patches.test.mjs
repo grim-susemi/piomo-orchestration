@@ -12,6 +12,10 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { EDITS, transformText } from "../plan-review-unlock/patch.mjs";
 import {
+  EDITS as OWNED_WORK_EDITS,
+  transformText as transformOwnedWorkText,
+} from "../task-owned-work-reclaim-guard/patch.mjs";
+import {
   STATES,
   aggregate,
   checkInstalled,
@@ -136,6 +140,11 @@ test("compareLedger reports both directions, duplicates and state disagreements"
 test("classifyState keeps private and external rows out of the repository states", () => {
   assert.equal(classifyState({ hint: "private" }), "private");
   assert.equal(classifyState({ hint: "external", upstream: "origin/main", ahead: 0 }), "external");
+});
+
+test("classifyState reports a retired row as retired", () => {
+  assert.ok(STATES.includes("retired"));
+  assert.equal(classifyState({ hint: "retired", upstream: "origin/main", ahead: 0 }), "retired");
 });
 
 test("strictVerdict: failures win, anything unverified is incomplete, only a clean full run passes", () => {
@@ -326,6 +335,47 @@ test("installed baseline accepts only the exact managed plan-review delta", () =
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("owned-work inverse composes before plan-review without changing expected hashes", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "check-owned-work-"));
+  try {
+    const file = path.join(dir, "omo-task.js");
+    const original = `${OWNED_WORK_EDITS.map((edit) => edit.anchor).join("\n")}\n${EDITS.map((edit) => edit.anchor).join("\n")}\n`;
+    fs.writeFileSync(file, original);
+    const baseline = sha256File(file);
+    const withPlan = transformText(original);
+    fs.writeFileSync(file, withPlan);
+    const planHash = sha256File(file);
+    fs.writeFileSync(file, transformOwnedWorkText(withPlan));
+    const both = checkInstalled(file, baseline);
+    assert.equal(both.status, "ok");
+    assert.equal(both.matched, baseline);
+    assert.equal(both.normalizedBy, "task-owned-work-reclaim-guard+plan-review-unlock");
+    const ownedOnly = checkInstalled(file, planHash);
+    assert.equal(ownedOnly.status, "ok");
+    assert.equal(ownedOnly.normalizedBy, "task-owned-work-reclaim-guard");
+    fs.appendFileSync(file, "// unrelated corruption\n");
+    assert.equal(checkInstalled(file, baseline).status, "drift");
+    fs.writeFileSync(file, withPlan.replace(OWNED_WORK_EDITS[0].anchor, OWNED_WORK_EDITS[0].replacement));
+    assert.equal(checkInstalled(file, baseline).status, "drift");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("owned-work candidate registration is truthful and leaves existing targets qualified", () => {
+  const rows = makeRows();
+  const candidate = rows.find((row) => row.name === "task-owned-work-reclaim-guard");
+  assert.equal(candidate.hint, "local-commit");
+  assert.equal(candidate.kind, "candidate");
+  assert.deepEqual(candidate.installed, []);
+  assert.ok(candidate.unverified.length > 0);
+  assert.ok(candidate.manual.length > 0);
+  const coordination = rows.find((row) => row.name === "coordination-adapters");
+  const targets = coordination.installed.filter((item) => item.path.endsWith("omo-task.js"));
+  assert.equal(targets.length, 2);
+  for (const target of targets) assert.equal(target.expected, "c2269e2887348e6b40cfdf6be5fd14d594f09342a5fa827e839c647ab475e69c");
 });
 
 test("runtimeRoots lists only snapshot directories that carry runtime-snapshot.json", () => {

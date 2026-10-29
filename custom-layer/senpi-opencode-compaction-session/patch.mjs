@@ -20,7 +20,8 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BACKUP_SUFFIX = ".opencode-session.bak";
 const NEW_SUFFIX = ".opencode-session.new";
-const VERSION = "2026.10.21-3";
+export const SUPPORTED_VERSIONS = ["2026.10.19", "2026.10.19-2", "2026.10.21-3", "2026.10.25-2"];
+const DEFAULT_VERSION = "2026.10.25-2";
 
 const CORE_FILE = "dist/core/extensions/builtin/compaction/speculative-summary.js";
 const CHUNK_DIR = "dist/bundle/chunks";
@@ -123,8 +124,15 @@ function transform(file) {
 }
 
 async function inspect(root) {
+  let detectedVersion;
+  try {
+    detectedVersion = JSON.parse(await readFile(join(root, "package.json"), "utf8")).version;
+  } catch {
+    detectedVersion = DEFAULT_VERSION;
+  }
   const files = await discover(root);
-  const report = { version: VERSION, supported: true, files: {} };
+  const supportedVersion = SUPPORTED_VERSIONS.includes(detectedVersion);
+  const report = { version: detectedVersion, supported: supportedVersion, files: {} };
   for (const file of files) {
     const state = stateOf(file.text, file.kind);
     report.files[file.rel] = { state, sha256: sha256(file.text) };
@@ -151,7 +159,7 @@ async function apply(root, receiptPath) {
   if (!report.supported) {
     return { exitCode: 2, output: { ...report, error: "unsupported anchor shape" } };
   }
-  const result = { version: VERSION, files: {} };
+  const result = { version: report.version, files: {} };
   for (const file of files) {
     const before = report.files[file.rel];
     if (before.state === "patched") {
@@ -192,7 +200,7 @@ async function apply(root, receiptPath) {
 
 async function remove(root, receiptPath) {
   const { files, report } = await inspect(root);
-  const result = { version: VERSION, files: {} };
+  const result = { version: report.version, files: {} };
   for (const file of files) {
     const before = report.files[file.rel];
     const backup = file.path + BACKUP_SUFFIX;

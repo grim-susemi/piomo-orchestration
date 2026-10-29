@@ -1,0 +1,13 @@
+{
+  "schema": "task-owned-work-reclaim-guard-qualification-v1",
+  "state": "ISOLATED_CANDIDATE_NOT_INSTALLED",
+  "omoVersion": "5.1.40",
+  "omoRoot": "C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.40-r1/package",
+  "taskFile": "plugin/extensions/omo-task.js",
+  "baselineSha256": "0dd146b930bd525cca12b6b39387a4d07db5cff0f5b6e29f3bf3ef04d2bdf45d",
+  "senpiVersion": "2026.10.19-2",
+  "existingContract": "AgentSession.isSessionBusy",
+  "scope": "All candidate edits stay here. Tests transform read-only source strings in memory and execute only extracted functions in isolated VM fixtures.",
+  "deploymentApproved": false,
+  "retirementCondition": "On a new official package with no exact candidate fragments, the full behavioral probe must report defect-absent; otherwise rederive or needs-review, never infer a fix from missing anchors."
+}

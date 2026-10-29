@@ -4,7 +4,7 @@ import { staticState, verdictOf } from "../probe.mjs";
 import { targetsFor } from "../patch.mjs";
 
 test("staticState tells the per-update hash from the deferred one", () => {
-  for (const version of ["2026.10.19", "2026.10.19-2"]) {
+  for (const version of ["2026.10.19", "2026.10.19-2", "2026.10.21-3", "2026.10.25-2"]) {
     for (const target of targetsFor(version)) {
       assert.equal(staticState(target.edits[0].anchor), "hashes", `${version} ${target.file}`);
       assert.equal(staticState(target.edits[0].replacement), "no-hash", `${version} ${target.file}`);

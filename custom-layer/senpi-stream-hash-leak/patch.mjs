@@ -31,7 +31,7 @@ import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const SUPPORTED_VERSIONS = ["2026.10.19", "2026.10.19-2"];
+export const SUPPORTED_VERSIONS = ["2026.10.19", "2026.10.19-2", "2026.10.21-3", "2026.10.25-2"];
 export const MARKER = "omoStreamHashLeakFix";
 const BACKUP_SUFFIX = ".leak-fix.bak";
 const NEW_SUFFIX = ".leak-fix.new";
@@ -40,8 +40,10 @@ const NEW_SUFFIX = ".leak-fix.new";
 export const FILE_CHUNKS = {
   "2026.10.19": "dist/bundle/chunks/chunk-35M5MVUZ.js",
   "2026.10.19-2": "dist/bundle/chunks/chunk-F4ZU4RBE.js",
+  "2026.10.21-3": "dist/bundle/chunks/chunk-BLWWTQZO.js",
+  "2026.10.25-2": "dist/bundle/chunks/chunk-J2U5VDG7.js",
 };
-const NEWEST_VERSION = "2026.10.19-2";
+const NEWEST_VERSION = "2026.10.25-2";
 export const FILE_CHUNK = FILE_CHUNKS["2026.10.19"];
 export const FILE_SESSION_WORKER = "dist/bundle/chunks/session-worker.js";
 export const FILE_BOUNDARY =
@@ -62,7 +64,21 @@ export function countOccurrences(text, needle) {
   }
 }
 
-function bundleEdits(key, modelArg) {
+function bundleEdits(key, modelArg, version) {
+  if (version === "2026.10.25-2") {
+    return [
+      {
+        name: "captureProviderFinal",
+        anchor: `captureProviderFinal(${key},message){let projection=semanticProjection(message);this.providerFinalByKey.set(${key},{hash:sessionSyncDigest(projection),projection:snapshotProjection(projection)})}`,
+        replacement: `captureProviderFinal(${key},message){/*${MARKER}*/let projection=semanticProjection(message);this.providerFinalByKey.set(${key},snapshotProjection(projection))}`,
+      },
+      {
+        name: "commit",
+        anchor: `return providerFinal.hash===sessionSyncDigest(committed)?{outcome:"clean"}:{outcome:"rewritten",divergedPath:firstDivergedPath(providerFinal.projection,committed)}`,
+        replacement: `return sessionSyncDigest(providerFinal)===sessionSyncDigest(committed)?{outcome:"clean"}:{outcome:"rewritten",divergedPath:firstDivergedPath(providerFinal,committed)}`,
+      },
+    ];
+  }
   return [
     {
       name: "captureProviderFinal",
@@ -77,44 +93,85 @@ function bundleEdits(key, modelArg) {
   ];
 }
 
-const BOUNDARY_EDITS = [
-  {
-    name: "captureProviderFinal",
-    anchor: [
-      "    captureProviderFinal(key, message) {",
-      "        this.providerFinalByKey.set(key, assistantContentHash(message));",
-      "    }",
-    ].join("\n"),
-    replacement: [
-      "    captureProviderFinal(key, message) {",
-      `        // ${MARKER}: keep the last streamed payload and hash it once in commit().`,
-      "        this.providerFinalByKey.set(key, {",
-      "            role: message.role,",
-      "            api: message.api,",
-      "            provider: message.provider,",
-      "            model: message.model,",
-      "            content: message.content.map(semanticContentBlock),",
-      "        });",
-      "    }",
-    ].join("\n"),
-  },
-  {
-    name: "commit",
-    anchor: '        return providerFinal === assistantContentHash(message) ? "clean" : "rewritten";',
-    replacement:
-      '        return sessionSyncDigest(providerFinal) === assistantContentHash(message) ? "clean" : "rewritten";',
-  },
-];
+function boundaryEdits(version) {
+  if (version === "2026.10.25-2") {
+    return [
+      {
+        name: "captureProviderFinal",
+        anchor: [
+          "    captureProviderFinal(key, message) {",
+          "        const projection = semanticProjection(message);",
+          "        this.providerFinalByKey.set(key, {",
+          "            hash: sessionSyncDigest(projection),",
+          "            projection: snapshotProjection(projection),",
+          "        });",
+          "    }",
+        ].join("\n"),
+        replacement: [
+          "    captureProviderFinal(key, message) {",
+          `        // ${MARKER}: keep the last streamed payload and hash it once in commit().`,
+          "        const projection = semanticProjection(message);",
+          "        this.providerFinalByKey.set(key, snapshotProjection(projection));",
+          "    }",
+        ].join("\n"),
+      },
+      {
+        name: "commit",
+        anchor: [
+          "        if (providerFinal.hash === sessionSyncDigest(committed))",
+          '            return { outcome: "clean" };',
+          '        return { outcome: "rewritten", divergedPath: firstDivergedPath(providerFinal.projection, committed) };',
+        ].join("\n"),
+        replacement: [
+          "        if (sessionSyncDigest(providerFinal) === sessionSyncDigest(committed))",
+          '            return { outcome: "clean" };',
+          '        return { outcome: "rewritten", divergedPath: firstDivergedPath(providerFinal, committed) };',
+        ].join("\n"),
+      },
+    ];
+  }
+  return [
+    {
+      name: "captureProviderFinal",
+      anchor: [
+        "    captureProviderFinal(key, message) {",
+        "        this.providerFinalByKey.set(key, assistantContentHash(message));",
+        "    }",
+      ].join("\n"),
+      replacement: [
+        "    captureProviderFinal(key, message) {",
+        `        // ${MARKER}: keep the last streamed payload and hash it once in commit().`,
+        "        this.providerFinalByKey.set(key, {",
+        "            role: message.role,",
+        "            api: message.api,",
+        "            provider: message.provider,",
+        "            model: message.model,",
+        "            content: message.content.map(semanticContentBlock),",
+        "        });",
+        "    }",
+      ].join("\n"),
+    },
+    {
+      name: "commit",
+      anchor: '        return providerFinal === assistantContentHash(message) ? "clean" : "rewritten";',
+      replacement:
+        '        return sessionSyncDigest(providerFinal) === assistantContentHash(message) ? "clean" : "rewritten";',
+    },
+  ];
+}
+
+const BOUNDARY_EDITS = boundaryEdits("2026.10.19");
 
 export const TARGETS = targetsFor("2026.10.19");
 
 /** The three targets of a version; an unknown version is shown the newest chunk. */
 export function targetsFor(version) {
-  const chunk = FILE_CHUNKS[version] ?? FILE_CHUNKS[NEWEST_VERSION];
+  const v = version ?? NEWEST_VERSION;
+  const chunk = FILE_CHUNKS[v] ?? FILE_CHUNKS[NEWEST_VERSION];
   return [
-    { file: chunk, edits: bundleEdits("key", "modelId") },
-    { file: FILE_SESSION_WORKER, edits: bundleEdits("key2", "modelId2") },
-    { file: FILE_BOUNDARY, edits: BOUNDARY_EDITS },
+    { file: chunk, edits: bundleEdits("key", "modelId", v) },
+    { file: FILE_SESSION_WORKER, edits: bundleEdits("key2", "modelId2", v) },
+    { file: FILE_BOUNDARY, edits: boundaryEdits(v) },
   ];
 }
 

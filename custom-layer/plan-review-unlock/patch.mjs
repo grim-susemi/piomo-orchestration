@@ -5,9 +5,9 @@ import { createHash } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const VERSION = "5.1.40";
+export const VERSION = "5.1.48";
 // 5.1.38 stays supported so the same script can check or remove the delta on a rolled-back install.
-export const SUPPORTED_VERSIONS = Object.freeze(["5.1.38", VERSION]);
+export const SUPPORTED_VERSIONS = Object.freeze(["5.1.38", "5.1.40", "5.1.44", VERSION]);
 export const FILES = ["plugin/extensions/omo-task.js"];
 export const EDITS = ["plan-consultant", "plan-reviewer"].map((name) => ({
   name,

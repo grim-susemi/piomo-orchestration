@@ -41,6 +41,46 @@
           "patched": "f07b3e840c7d678a94a818348a15b17a89e4e14d84b0dd0d03cfc5c29e5fcf2c"
         }
       }
+    },
+    "2026.10.21-3": {
+      "files": {
+        "dist/core/extensions/builtin/moved-path-guard/command-paths.js": {
+          "pristine": "0639b32fb3b4249d452b73444b7e6f0a9c702df0da1a1622595198e7db1b51a2",
+          "patched": "7450f9cb11480e02c27e3511cc941ae3ae65c3d02ed1de119c28745cd2127adb"
+        },
+        "dist/core/tools/filesystem-policy.js": {
+          "pristine": "d04f4fe3705a3053652bf545f1b7a77062a7bd9e5e1b2d88de3d531d80b42ede",
+          "patched": "d6b9d4134e50524286b571281ed94727109b668b709bae09ac6cd9a6b5670da8"
+        },
+        "dist/bundle/chunks/chunk-BLWWTQZO.js": {
+          "pristine": "673f08d97b9cb84c6ecfcde5722af71a5c577b808099d1773daf1533585ee749",
+          "patched": "8915f77439c0e0bc0b68f6d7268de804cdea26c83fea3bc7d4f87783e3e06b04"
+        },
+        "dist/bundle/chunks/session-worker.js": {
+          "pristine": "2248ee27c5043866b9f934b53fe92766e1f17bebe5534db151219f74b4e8c020",
+          "patched": "065ef0a999e72a878d56fd5bdff6068a79f957ec1b1dc7e74f88fed57c33cf18"
+        }
+      }
+    },
+    "2026.10.25-2": {
+      "files": {
+        "dist/core/extensions/builtin/moved-path-guard/command-paths.js": {
+          "pristine": "c6c316c5ad68f95332b04dd45df168cb2bbf14ee84d44c5c339a5c40f2b64bdf",
+          "patched": "2fd4233c2d17b12e102fc7fddbf9fee82d0ca81091bb5ba3b50a49209f22b59c"
+        },
+        "dist/core/tools/filesystem-policy.js": {
+          "pristine": "d04f4fe3705a3053652bf545f1b7a77062a7bd9e5e1b2d88de3d531d80b42ede",
+          "patched": "d6b9d4134e50524286b571281ed94727109b668b709bae09ac6cd9a6b5670da8"
+        },
+        "dist/bundle/chunks/chunk-J2U5VDG7.js": {
+          "pristine": "f363e89543b64962d80ec5c5b60d5bee7646e6d50bae8933ff8d98157dfb9bbc",
+          "patched": "7bc93390461d0d0211ce17215f486b87fdf036b47b1ffc845911907dffc9cb0f"
+        },
+        "dist/bundle/chunks/session-worker.js": {
+          "pristine": "af640445a02fb8ffbf99b4da3ade57d198c9b60f18850d3404f463d49e2981a3",
+          "patched": "ec620ec0e14e25723d587d36068468f27436ccccf977b68e2121259640e89841"
+        }
+      }
     }
   }
 }

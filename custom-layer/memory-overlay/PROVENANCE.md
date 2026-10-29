@@ -1,5 +1,9 @@
 # memory-overlay - provenance
 
+## R24 re-capture (2026-10-28, omo-ai 5.1.48 / senpi 2026.10.25-2)
+
+Generation `C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.48-r1`, manifest sha256 `f84bdb69ea293b89c5d76bcece05db0e267532208619b05f67fb2d8a29c5e002`, gate `cf5bd2bdd951a3b3105447920b7e7a4283737e09a3b85ba4f89378441f1fd35e`. Build project `C:/Users/USER/orca/projects/piomo-memory-rollback-5.1.48` (copy of the 5.1.44 project, no git). Stock comparison: official omo-ai 5.1.48 tarball unpacked at `staging/upgrade-5.1.48/pristine-omo-ai`. Patched bundles: `omo.js` `44849d96...`, `omo-memory-doctor.js` `cf942862...`, `omo-memory-memfs.js` `1ea49d97...`; the other 767 package files equal stock. Catch bindings re-derived from the 5.1.48 bytes. Baseline reproduces the defect and the patched build recovers on the isolated 2026.10.25-2 tree. PR #10000 is still OPEN (head `4bec605458f7466eff0fae740db0d40c3486510c`). The sections below describe earlier generations.
+
 Re-captured 2026-10-22 from the live R22 generation (first captured 2026-10-20 from R21).
 This patch has no git repository of its own: the build project
 `C:/Users/USER/orca/projects/piomo-memory-rollback-5.1.40`

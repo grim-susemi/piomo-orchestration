@@ -119,4 +119,6 @@ test("a failed rename rolls back every file already replaced", () => {
 test("the 2026.10.19 target list still names the original chunk", () => {
   assert.equal(targetsFor("2026.10.19")[0].file, "dist/bundle/chunks/chunk-35M5MVUZ.js");
   assert.equal(targetsFor("2026.10.19-2")[0].file, "dist/bundle/chunks/chunk-F4ZU4RBE.js");
+  assert.equal(targetsFor("2026.10.21-3")[0].file, "dist/bundle/chunks/chunk-BLWWTQZO.js");
+  assert.equal(targetsFor("2026.10.25-2")[0].file, "dist/bundle/chunks/chunk-J2U5VDG7.js");
 });

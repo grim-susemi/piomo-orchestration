@@ -75,10 +75,50 @@ const BUNDLE_SHAPES = {
       canonical: "canonicalPath3",
     },
   },
+  "2026.10.21-3": {
+    chunk: "dist/bundle/chunks/chunk-BLWWTQZO.js",
+    chunkShape: {
+      match: "match",
+      path: "path14",
+      segment: "segment",
+      anchored: "anchored",
+      resolve: "resolve8",
+      canonical: "canonicalPath2",
+    },
+    workerShape: {
+      match: "match3",
+      path: "path29",
+      segment: "segment2",
+      anchored: "anchored2",
+      resolve: "resolve25",
+      canonical: "canonicalPath3",
+    },
+  },
+  "2026.10.25-2": {
+    chunk: "dist/bundle/chunks/chunk-J2U5VDG7.js",
+    chunkShape: {
+      match: "match",
+      path: "path14",
+      segment: "segment",
+      anchored: "anchored",
+      resolve: "resolve8",
+      canonical: "canonicalPath2",
+      absolute: "absolutePath",
+    },
+    workerShape: {
+      match: "match3",
+      path: "path29",
+      segment: "segment2",
+      anchored: "anchored2",
+      resolve: "resolve29",
+      canonical: "canonicalPath4",
+      absolute: "absolutePath2",
+    },
+  },
 };
 
 export const KNOWN_VERSIONS = Object.keys(BUNDLE_SHAPES);
-const NEWEST_VERSION = "2026.10.19-2";
+const NEWEST_VERSION = "2026.10.25-2";
 
 /** The four files a version targets; an unknown version is shown the newest shape. */
 export function filesFor(version = NEWEST_VERSION) {
@@ -161,10 +201,10 @@ function bundleTarget(file, shape, predicate) {
       },
       {
         name: "canonicalizeFilesystemPath",
-        anchor: `async function canonicalizeFilesystemPath(filePath){let absolutePath=${shape.resolve}(filePath),${shape.canonical}=await withResolutionDeadline(canonicalizeByOpening(absolutePath));return ${shape.canonical}!==RESOLUTION_TIMED_OUT?${shape.canonical}:realpathWithoutOpenStrict(absolutePath)}`,
+        anchor: `async function canonicalizeFilesystemPath(filePath){let ${shape.absolute ?? "absolutePath"}=${shape.resolve}(filePath),${shape.canonical}=await withResolutionDeadline(canonicalizeByOpening(${shape.absolute ?? "absolutePath"}));return ${shape.canonical}!==RESOLUTION_TIMED_OUT?${shape.canonical}:realpathWithoutOpenStrict(${shape.absolute ?? "absolutePath"})}`,
         replacement: lines(
           predicate,
-          `async function canonicalizeFilesystemPath(filePath){let absolutePath=${shape.resolve}(filePath),${shape.canonical}=await withResolutionDeadline(canonicalizeByOpening(absolutePath));if(${shape.canonical}!==RESOLUTION_TIMED_OUT)return ${shape.canonical};if(omoFreezeFixUncTimeout(absolutePath))throw Object.assign(new Error("ETIMEDOUT: UNC path did not resolve within the deadline"),{code:"ETIMEDOUT",path:absolutePath,omoFreezeFix:!0});return realpathWithoutOpenStrict(absolutePath)}`
+          `async function canonicalizeFilesystemPath(filePath){let ${shape.absolute ?? "absolutePath"}=${shape.resolve}(filePath),${shape.canonical}=await withResolutionDeadline(canonicalizeByOpening(${shape.absolute ?? "absolutePath"}));if(${shape.canonical}!==RESOLUTION_TIMED_OUT)return ${shape.canonical};if(omoFreezeFixUncTimeout(${shape.absolute ?? "absolutePath"}))throw Object.assign(new Error("ETIMEDOUT: UNC path did not resolve within the deadline"),{code:"ETIMEDOUT",path:${shape.absolute ?? "absolutePath"},omoFreezeFix:!0});return realpathWithoutOpenStrict(${shape.absolute ?? "absolutePath"})}`
         ),
       },
     ],

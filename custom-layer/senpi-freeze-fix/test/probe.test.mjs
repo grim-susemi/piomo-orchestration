@@ -22,10 +22,18 @@ const PATCH = join(TOOL_DIR, "patch.mjs");
 const GLOBAL_SENPI = "C:/Users/USER/.bun/install/global/node_modules/@code-yeongyu/senpi";
 const SENPI_ROOT = process.env.SENPI_ROOT ?? GLOBAL_SENPI;
 const SENPI_19_2_ROOT = process.env.SENPI_19_2_ROOT ?? GLOBAL_SENPI;
+const SENPI_21_3_ROOT =
+  process.env.SENPI_21_3_ROOT ??
+  "C:/Users/USER/.omo-stable-500/staging/upgrade-5.1.44/scratch-tree/node_modules/@code-yeongyu/senpi";
+const SENPI_25_2_ROOT =
+  process.env.SENPI_25_2_ROOT ??
+  "C:/Users/USER/.omo-stable-500/staging/upgrade-5.1.48/pristine-senpi";
 
 const VERSION_SOURCES = {
   "2026.10.19": SENPI_ROOT,
   "2026.10.19-2": SENPI_19_2_ROOT,
+  "2026.10.21-3": SENPI_21_3_ROOT,
+  "2026.10.25-2": SENPI_25_2_ROOT,
 };
 
 function installed(version) {

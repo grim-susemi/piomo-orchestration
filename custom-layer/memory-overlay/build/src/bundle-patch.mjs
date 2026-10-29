@@ -3,14 +3,14 @@ import { createHash } from "node:crypto";
 export const UPSTREAM = Object.freeze({
   repository: "code-yeongyu/oh-my-openagent",
   pull: 10000,
-  head: "dd86ddb7f9fd919ed4921bca2668c0016be7817e",
+  head: "4bec605458f7466eff0fae740db0d40c3486510c",
   base: "c2c258d6ea7284b3aeae052fbcee3a5231e0793e",
 });
-export const VERSION = Object.freeze({ omo: "5.1.40", senpi: "2026.10.19-2", revision: "memory-rollback-r1" });
+export const VERSION = Object.freeze({ omo: "5.1.48", senpi: "2026.10.25-2", revision: "memory-rollback-r1" });
 export const PINS = Object.freeze({
-  "omo.js": "99262013ba80365491acdb1224291f6f41c5b0e1013e07ca605e452ed8c83b19",
-  "omo-memory-memfs.js": "a1c8a81358b7e5f22f323040d5489d13c33d756ee710fa5f5d79187667d33b7b",
-  "omo-memory-doctor.js": "cdea5f06ea8b37cd6bd3c3171d24785af747b423f7ea8bd8acf6d53032801bfa",
+  "omo.js": "56824d1cd5c625616dcde59c8e29cdb58064a7d46c88d41bba5387a6e6bc0e66",
+  "omo-memory-memfs.js": "76e0704451a39c985dd5e6d78ddc12d84cea1e14c8f14ec1a5b3020ed047e13a",
+  "omo-memory-doctor.js": "e9a1c6e210e63fb4d5caa5a0f2528d7f090482e143fecf11d2ec68ef929fd753",
 });
 
 export class PatchRefused extends Error {
@@ -53,15 +53,16 @@ export function patchBundle(name, input) {
     body = replaceOne(body, `this.git(${prefix}`, `this.git(["--literal-pathspecs",${prefix.slice(1)}`, `${name} ${prefix}`);
   }
   if (name === "omo.js") {
-    // 5.1.40 bindings, re-derived from the pinned bundle bytes: oP=NoEffectiveChangesError
-    // ("Memory write produced no effective changes"), iP=DirtyRepoError ("Memory repo has
-    // uncommitted changes..."), lM=MemorySecretError, yD=MemoryToolError, vN=StrandedGitLockError
-    // and vD=undoBehindKeptLock. Order follows commit-write.ts at PR head dd86ddb7:
-    // no-effective-changes first, then stranded lock, dirty repo rethrown, restore, secret wrap.
-    // The 5.1.38 names (OK/LV/zG/zV/wB) are NOT reused; anchors are verified unique.
+    // 5.1.48 bindings, re-derived from the pinned bundle bytes: fC=NoEffectiveChangesError
+    // ("Memory write produced no effective changes"), uC=DirtyRepoError ("Memory repo has
+    // uncommitted changes..."), jD=MemorySecretError, JF=MemoryToolError, NM=StrandedGitLockError
+    // and VF=undoBehindKeptLock. Upstream 5.1.48 restores only on a secret error; the delta
+    // re-adds the transaction restore for any other failure while rethrowing the dirty repo
+    // before any restore, then wraps the secret error. The 5.1.44 names (dP/lP/QM/PF/sM/jF)
+    // and 5.1.40 names (oP/iP/lM/yD/vN/vD) are NOT reused; anchors are verified unique.
     body = replaceOne(body,
-      'if(e instanceof oP)throw new yD(s??"made no effective changes",{cause:e});if(e instanceof lM)throw await t.restorePaths(l),new yD(e.message,{cause:e});if(e instanceof vN)return vD(t,l,e);throw e}',
-      'if(e instanceof oP)throw new yD(s??"made no effective changes",{cause:e});if(e instanceof vN)return vD(t,l,e);if(e instanceof iP)throw e;await t.restorePaths(l);if(e instanceof lM)throw new yD(e.message,{cause:e});throw e}',
+      'if(e instanceof fC)throw new JF(s??"made no effective changes",{cause:e});if(e instanceof jD)throw await t.restorePaths(d),new JF(e.message,{cause:e});if(e instanceof NM)return VF(t,d,e);throw e}',
+      'if(e instanceof fC)throw new JF(s??"made no effective changes",{cause:e});if(e instanceof NM)return VF(t,d,e);if(e instanceof uC)throw e;await t.restorePaths(d);if(e instanceof jD)throw new JF(e.message,{cause:e});throw e}',
       "commitMemoryWrite catch");
   }
   const notice = `// Locally modified: ${VERSION.revision} on omo-ai ${VERSION.omo}; PR #10000 at ${UPSTREAM.head}. See overlay NOTICE.md.\n`;

@@ -36,6 +36,10 @@ import {
   classifyText as classifyPlanReviewText,
   transformText as transformPlanReviewText,
 } from "./plan-review-unlock/patch.mjs";
+import {
+  classifyText as classifyOwnedWorkText,
+  transformText as transformOwnedWorkText,
+} from "./task-owned-work-reclaim-guard/patch.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.dirname(HERE);
@@ -45,7 +49,7 @@ const AGENT =
   "C:/Users/USER/.omo-stable-500/home/.omo/agent";
 const OVERLAY =
   process.env.OMO_CHECK_OVERLAY_ROOT ||
-  "C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.40-r1/package";
+  "C:/Users/USER/.omo-stable-500/staging/memory-rollback-5.1.48-r1/package";
 const GLOBAL_OMO =
   process.env.OMO_CHECK_GLOBAL_OMO ||
   "C:/Users/USER/.bun/install/global/node_modules/omo-ai";
@@ -105,9 +109,12 @@ export function parseRevCount(text) {
   return { behind: Number(m[1]), ahead: Number(m[2]) };
 }
 
-export const STATES = Object.freeze(["tracked", "local-commit", "private", "external"]);
+export const STATES = Object.freeze(["tracked", "local-commit", "private", "external", "retired"]);
 
 export function classifyState({ hint, upstream, ahead } = {}) {
+  // A retired row records a patch whose upstream fix shipped: it keeps history and
+  // claims no installed file, so a reappearing file is reported as unledgered.
+  if (hint === "retired") return "retired";
   // Owner configuration and third-party copies have no repository of ours by design.
   if (hint === "private" || hint === "external") return hint;
   if (hint === "local-commit") return "local-commit";
@@ -453,12 +460,20 @@ export function checkInstalled(file, expected) {
     // Compare the full original bytes after undoing this exact managed delta.
     // Any unrelated change still fails the existing baseline hash check.
     if (!matched && path.basename(file) === "omo-task.js") {
-      const text = fs.readFileSync(file, "utf8");
-      if (classifyPlanReviewText(text) === "patched") {
+      let text = fs.readFileSync(file, "utf8");
+      const normalized = [];
+      if (classifyOwnedWorkText(text) === "patched") {
+        text = transformOwnedWorkText(text, "remove");
+        normalized.push("task-owned-work-reclaim-guard");
+        const baseHash = sha256Buffer(Buffer.from(text));
+        matched = expectedList.find((value) => value === baseHash) || null;
+      }
+      if (!matched && classifyPlanReviewText(text) === "patched") {
         const baseHash = sha256Buffer(Buffer.from(transformPlanReviewText(text, "remove")));
         matched = expectedList.find((value) => value === baseHash) || null;
-        if (matched) normalizedBy = "plan-review-unlock";
+        normalized.push("plan-review-unlock");
       }
+      if (matched) normalizedBy = normalized.join("+");
     }
     return {
       status: matched ? "ok" : "drift",
@@ -673,6 +688,26 @@ function runJsonLine(command, args, prefix, timeout = 60000) {
 export function makeRows() {
   return [
     {
+      name: "task-owned-work-reclaim-guard",
+      kind: "candidate",
+      hint: "local-commit",
+      location: "custom-layer/task-owned-work-reclaim-guard",
+      repoPath: ORCH,
+      sourcePaths: ["custom-layer/task-owned-work-reclaim-guard"],
+      sourceFiles: [
+        `${HERE}/task-owned-work-reclaim-guard/patch.mjs`,
+        `${HERE}/task-owned-work-reclaim-guard/probe.mjs`,
+        `${HERE}/task-owned-work-reclaim-guard/installer.mjs`,
+        `${HERE}/task-owned-work-reclaim-guard/qualification.json`,
+        `${HERE}/task-owned-work-reclaim-guard/README.md`,
+        `${HERE}/task-owned-work-reclaim-guard/test/patch.test.mjs`,
+        `${HERE}/task-owned-work-reclaim-guard/test/installer.test.mjs`,
+      ],
+      installed: [],
+      unverified: ["Candidate only: not installed or activated; installer is restricted to disposable fixtures"],
+      manual: ["Deployment and real-runtime ownership acceptance require separate authorization"],
+    },
+    {
       name: "plan-review-unlock",
       hint: "tracked",
       location: "custom-layer/plan-review-unlock",
@@ -702,13 +737,13 @@ export function makeRows() {
         "build/test-captured/memory-fixture.mjs",
       ],
       capturedExpected: {
-        "omo.js": "de8408a08dc84a389316af6f6fc407fa260d129b04748e354e291b104cee8c6c",
-        "build/src/gate.mjs": "19f1fb535faac06d2b971e8c06713c9ae24e0ad5a4dadd13a504119d0e456fda",
+        "omo.js": "44849d96bad24b916a0f65632f3427420838a699ba0a66b1d049a47b40f62b55",
+        "build/src/gate.mjs": "cf5bd2bdd951a3b3105447920b7e7a4283737e09a3b85ba4f89378441f1fd35e",
       },
       installed: [
-        { path: `${OVERLAY}/plugin/extensions/omo.js`, expected: "de8408a08dc84a389316af6f6fc407fa260d129b04748e354e291b104cee8c6c" },
-        { path: `${OVERLAY}/plugin/extensions/omo-memory-doctor.js`, expected: "900cb31eaf81e6b75e188820a0738f4c8943338d5d1cc45841637151b6a3e813" },
-        { path: `${OVERLAY}/plugin/extensions/omo-memory-memfs.js`, expected: "7f832ed672cad107d7a54c3f6c90edd7275da2af1bf7305b2cefead56a6e3bdc" },
+        { path: `${OVERLAY}/plugin/extensions/omo.js`, expected: "44849d96bad24b916a0f65632f3427420838a699ba0a66b1d049a47b40f62b55" },
+        { path: `${OVERLAY}/plugin/extensions/omo-memory-doctor.js`, expected: "cf94286273bd0585b16cf62d134216297bd67340375f3c1f88add9949a0f1e45" },
+        { path: `${OVERLAY}/plugin/extensions/omo-memory-memfs.js`, expected: "1ea49d9760562821858566aa6efe710882836612659796580b92c6a7b12ff84f" },
       ],
     },
     {
@@ -719,17 +754,32 @@ export function makeRows() {
       discover: [`${AGENT}/packages/piomo-agent-coordination-mod`],
       sourcePaths: ["dist", "scripts", "src", "test"],
       worktreeChecks: [
-        { path: `${COORD}/dist/extension.js`, expected: "6035ef1aef60e706bf8fa52a7f6b7946a6c0616d6030f38740bdec31d13bb68e" },
+        { path: `${COORD}/dist/extension.js`, expected: "afa5d448cbc5e15a8903cb06aee82c49ab3fab8440f8a63b8b5fa7b1df8d0707" },
       ],
       sourceText: [
         { path: "scripts/build-adapter.mjs", contains: "d41bc807b6f91768db84b7f8f76092107aebf9934888cc749174d88a1c00ac6b" },
       ],
       installed: [
-        { path: `${AGENT}/packages/piomo-agent-coordination-mod/dist/extension.js`, expected: "6035ef1aef60e706bf8fa52a7f6b7946a6c0616d6030f38740bdec31d13bb68e" },
-        { path: `${OVERLAY}/plugin/extensions/omo-task.js`, expected: "c2269e2887348e6b40cfdf6be5fd14d594f09342a5fa827e839c647ab475e69c" },
-        { path: `${GLOBAL_OMO}/plugin/extensions/omo-task.js`, expected: "c2269e2887348e6b40cfdf6be5fd14d594f09342a5fa827e839c647ab475e69c" },
+        { path: `${AGENT}/packages/piomo-agent-coordination-mod/dist/extension.js`, expected: "afa5d448cbc5e15a8903cb06aee82c49ab3fab8440f8a63b8b5fa7b1df8d0707" },
+        { path: `${OVERLAY}/plugin/extensions/omo-task.js`, expected: "7924637b4fad2237ee4c3e736eace83de64674693c16ccc79460ed9b04c7d7b8" },
+        { path: `${GLOBAL_OMO}/plugin/extensions/omo-task.js`, expected: "7924637b4fad2237ee4c3e736eace83de64674693c16ccc79460ed9b04c7d7b8" },
       ],
-      extras: ["adapter=generated(c2269e28, omo 5.1.40)"],
+      extras: ["adapter=generated(7924637b, omo 5.1.48)"],
+    },
+    {
+      name: "omo-memento",
+      hint: "tracked",
+      location: "agent/memento/integration/generation-000003/src/extension.mjs",
+      repoPath: "C:/Users/USER/orca/projects/piomo-memento-mod",
+      discover: [`${AGENT}/extensions/omo-memento.js`],
+      sourceBlobs: [
+        { path: "src/extension.mjs", expected: "d3dfb320ab9a06f6b4c394d0e2693ebf730741392bbf9440c8bba84dcb5869fa" },
+      ],
+      installed: [
+        { path: `${AGENT}/memento/integration/generation-000003/src/extension.mjs`, expected: "d3dfb320ab9a06f6b4c394d0e2693ebf730741392bbf9440c8bba84dcb5869fa" },
+        { path: `${AGENT}/extensions/omo-memento.js`, expected: "d8721adc209d2b2d82e7805bc16e7f3cb7050d21dbf77475bd24f47712ddb5ae" },
+      ],
+      extras: ["generation=generation-000003 (pointer in agent/memento/current.json)"],
     },
     {
       name: "task-record-publish-retry",
@@ -807,16 +857,13 @@ export function makeRows() {
     },
     {
       name: "omo-compaction-model",
-      hint: "tracked",
+      hint: "retired",
       location: "src/omo-compaction-model.ts",
       repoPath: COMPACTION,
-      discover: [`${AGENT}/extensions/omo-compaction-model.ts`],
       sourceBlobs: [
         { path: "src/omo-compaction-model.ts", expected: "f5bbe48a2b30afc3f3303365ad4b98717f344343c8e540ff8080826ead48fb48" },
       ],
-      installed: [
-        { path: `${AGENT}/extensions/omo-compaction-model.ts`, expected: "f5bbe48a2b30afc3f3303365ad4b98717f344343c8e540ff8080826ead48fb48" },
-      ],
+      installed: [],
     },
     {
       name: "early-compaction",
@@ -829,7 +876,7 @@ export function makeRows() {
         { path: "package.json", contains: "bun build src/extension.ts --outfile dist/early-compaction.js" },
       ],
       installed: [
-        { path: `${AGENT}/extensions/early-compaction.js`, expected: "c0416e2a5896961d1ee97925a74e788fbeba13a4deb0b69dc2312279706f740a" },
+        { path: `${AGENT}/extensions/early-compaction.js`, expected: "15bad488819c9c45ec5501588455635b0c888a57c11940e7d4224d265ee77fe1" },
       ],
       extras: ["build=bun-run-build(dist gitignored)"],
       qualified: `${AGENT}/early-compaction/qualified.json`,
@@ -960,22 +1007,22 @@ export function makeRows() {
       hint: "tracked",
       location: "custom-layer/stable-500-launcher",
       repoPath: ORCH,
-      captured: ["omo.cmd", "omo-memory-selector-entry-r22.mjs", "manifest.json", "README.md"],
+      captured: ["omo.cmd", "omo-memory-selector-entry-r24.mjs", "manifest.json", "README.md"],
       capturedExpected: {
-        "omo.cmd": "cb11f16fb763c6e5b66b774dec00451dca0cac4454b2649a1b5339db5fc65fca",
-        "omo-memory-selector-entry-r22.mjs": "7a474fe99574caa78d53c025d59c55b4f1814940f4a4e045153580656a745849",
-        "manifest.json": "7a67e6b96c257ea4aad2487a9ddcd25e53b908ba147ab9f6164d5975d346f096",
+        "omo.cmd": "0ee28b70c27696affb8656a9b1f4bee7e799b1f9b4b9e934a498b70ca63fd8ea",
+        "omo-memory-selector-entry-r24.mjs": "9632e8cb043b740fbaaffa89a873f09b5864c0c3af97b59c7e198e4c9e681f74",
+        "manifest.json": "f84bdb69ea293b89c5d76bcece05db0e267532208619b05f67fb2d8a29c5e002",
       },
       installed: [
-        { path: `${LANE}/omo.cmd`, expected: "cb11f16fb763c6e5b66b774dec00451dca0cac4454b2649a1b5339db5fc65fca" },
-        { path: `${LANE}/staging/omo-memory-selector-entry-r22.mjs`, expected: "7a474fe99574caa78d53c025d59c55b4f1814940f4a4e045153580656a745849" },
-        { path: `${LANE}/staging/memory-rollback-5.1.40-r1/gate.mjs`, expected: "19f1fb535faac06d2b971e8c06713c9ae24e0ad5a4dadd13a504119d0e456fda" },
-        { path: `${LANE}/staging/memory-rollback-5.1.40-r1/manifest.json`, expected: "7a67e6b96c257ea4aad2487a9ddcd25e53b908ba147ab9f6164d5975d346f096" },
+        { path: `${LANE}/omo.cmd`, expected: "0ee28b70c27696affb8656a9b1f4bee7e799b1f9b4b9e934a498b70ca63fd8ea" },
+        { path: `${LANE}/staging/omo-memory-selector-entry-r24.mjs`, expected: "9632e8cb043b740fbaaffa89a873f09b5864c0c3af97b59c7e198e4c9e681f74" },
+        { path: `${LANE}/staging/memory-rollback-5.1.48-r1/gate.mjs`, expected: "cf5bd2bdd951a3b3105447920b7e7a4283737e09a3b85ba4f89378441f1fd35e" },
+        { path: `${LANE}/staging/memory-rollback-5.1.48-r1/manifest.json`, expected: "f84bdb69ea293b89c5d76bcece05db0e267532208619b05f67fb2d8a29c5e002" },
       ],
       pins: [
         { label: "omo.cmd", file: `${LANE}/omo.cmd`, omo: /^set "OMO_STABLE_PINNED_OMO=([^"]+)"/m, senpi: /^set "OMO_STABLE_PINNED_SENPI=([^"]+)"/m },
-        { label: "reentry", file: `${LANE}/staging/omo-memory-selector-entry-r22.mjs`, omo: /^const PINNED_OMO = "([^"]+)"/m, senpi: /^const PINNED_SENPI = "([^"]+)"/m },
-        { label: "manifest", file: `${LANE}/staging/memory-rollback-5.1.40-r1/manifest.json`, json: true },
+        { label: "reentry", file: `${LANE}/staging/omo-memory-selector-entry-r24.mjs`, omo: /^const PINNED_OMO = "([^"]+)"/m, senpi: /^const PINNED_SENPI = "([^"]+)"/m },
+        { label: "manifest", file: `${LANE}/staging/memory-rollback-5.1.48-r1/manifest.json`, json: true },
       ],
       manual: ["after an approved update, launch probes through omo.cmd and the reentry select the intended home and plugin"],
     },

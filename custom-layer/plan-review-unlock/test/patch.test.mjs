@@ -51,8 +51,8 @@ test("unknown gate text is not treated as an upstream fix", () => {
   assert.equal(evaluateText("export const unrelated = true").verdict, "needs-review");
 });
 
-test("5.1.40 and 5.1.38 are supported, any other version is refused", async (t) => {
-  for (const version of ["5.1.40", "5.1.38"]) {
+test("5.1.48, 5.1.44, 5.1.40 and 5.1.38 are supported, any other version is refused", async (t) => {
+  for (const version of ["5.1.48", "5.1.44", "5.1.40", "5.1.38"]) {
     assert.equal((await checkTree(await sandbox(t, source, version))).supported, true);
   }
   const other = await sandbox(t, source, "5.1.41");
