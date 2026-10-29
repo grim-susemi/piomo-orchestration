@@ -982,7 +982,7 @@ export function makeRows() {
       name: "omo-primary-agents",
       kind: "integration",
       hint: "tracked",
-      location: "piomo-primary-agents (generation install, not yet installed)",
+      location: "piomo-primary-agents (generation install, live as generation-000001 since 2026-10-29, commit 5f9bfcf)",
       repoPath: PRIMARY,
       sourcePaths: ["."],
       integration: {
@@ -998,7 +998,7 @@ export function makeRows() {
       name: "omo-oracle-arsenal",
       kind: "integration",
       hint: "tracked",
-      location: "piomo-oracle-arsenal-mod (generation install, not yet installed)",
+      location: "piomo-oracle-arsenal-mod (generation install, live as generation-000001 since 2026-10-29, commit 3cf4ca3)",
       repoPath: ARSENAL,
       sourcePaths: ["."],
       integration: {
