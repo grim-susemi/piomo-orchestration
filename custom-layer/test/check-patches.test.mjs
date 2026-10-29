@@ -9,7 +9,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { EDITS, transformText } from "../plan-review-unlock/patch.mjs";
 import {
   EDITS as OWNED_WORK_EDITS,
@@ -376,6 +376,64 @@ test("owned-work candidate registration is truthful and leaves existing targets 
   const targets = coordination.installed.filter((item) => item.path.endsWith("omo-task.js"));
   assert.equal(targets.length, 2);
   for (const target of targets) assert.equal(target.expected, "c2269e2887348e6b40cfdf6be5fd14d594f09342a5fa827e839c647ab475e69c");
+});
+
+function oracleRowFor(agent) {
+  const res = spawnSync(process.execPath, [CHECKER, "--only", "omo-oracle-advisor", "--json"], {
+    encoding: "utf8",
+    timeout: 60000,
+    env: { ...process.env, OMO_CHECK_AGENT_DIR: agent },
+  });
+  assert.equal(res.status, 0, res.stderr);
+  const doc = JSON.parse(res.stdout);
+  assert.equal(doc.rows.length, 1);
+  return doc.rows[0];
+}
+
+function writeAdvisorGeneration(agent, shimTarget, record) {
+  const gen = path.join(agent, "oracle-advisor", "integration", "generation-000002", "src");
+  fs.mkdirSync(gen, { recursive: true });
+  fs.writeFileSync(path.join(gen, "extension.mjs"), "export default {};\n");
+  fs.mkdirSync(path.join(agent, "extensions"), { recursive: true });
+  fs.writeFileSync(
+    path.join(agent, "extensions", "omo-oracle-advisor.js"),
+    `// managed by omo-oracle-advisor\nexport { default } from ${JSON.stringify(shimTarget)};\n`,
+  );
+  fs.writeFileSync(path.join(agent, "oracle-advisor", "current.json"), JSON.stringify(record));
+  return path.join(gen, "extension.mjs");
+}
+
+test("integration shim with an absolute file URL resolves its generation", () => {
+  const agent = fs.mkdtempSync(path.join(os.tmpdir(), "check-int-url-"));
+  try {
+    const entry = writeAdvisorGeneration(
+      agent,
+      pathToFileURL(path.join(agent, "oracle-advisor", "integration", "generation-000002", "src", "extension.mjs")).href,
+      { generation: "generation-000002" },
+    );
+    assert.ok(fs.existsSync(entry));
+    assert.deepEqual(oracleRowFor(agent).installed.map((item) => item.status), ["ok", "ok", "ok"]);
+  } finally {
+    fs.rmSync(agent, { recursive: true, force: true });
+  }
+});
+
+test("integration record with files and no sha256 is hash-checked and reports a mismatch", () => {
+  const agent = fs.mkdtempSync(path.join(os.tmpdir(), "check-int-files-"));
+  try {
+    const entry = writeAdvisorGeneration(agent, "../oracle-advisor/integration/generation-000002/src/extension.mjs", {
+      generation: "generation-000002",
+      files: { "src/extension.mjs": "0".repeat(64) },
+    });
+    assert.deepEqual(oracleRowFor(agent).installed.map((item) => item.status), ["ok", "ok", "ok", "drift"]);
+    fs.writeFileSync(path.join(agent, "oracle-advisor", "current.json"), JSON.stringify({
+      generation: "generation-000002",
+      files: { "src/extension.mjs": sha256File(entry) },
+    }));
+    assert.deepEqual(oracleRowFor(agent).installed.map((item) => item.status), ["ok", "ok", "ok", "ok"]);
+  } finally {
+    fs.rmSync(agent, { recursive: true, force: true });
+  }
 });
 
 test("runtimeRoots lists only snapshot directories that carry runtime-snapshot.json", () => {

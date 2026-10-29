@@ -73,6 +73,8 @@ const EARLY = "C:/Users/USER/orca/projects/piomo-early-compaction-mod";
 const BRIEFING = "C:/Users/USER/orca/projects/piomo-briefing";
 const DASHBOARD = "C:/Users/USER/orca/projects/omo-herdr-dashboard";
 const ORACLE = "C:/Users/USER/orca/projects/piomo-oracle-advisor-mod";
+const PRIMARY = "C:/Users/USER/orca/projects/piomo-primary-agents";
+const ARSENAL = "C:/Users/USER/orca/projects/piomo-oracle-arsenal-mod";
 
 // Both chunk names are listed: chunk-35M5MVUZ.js is senpi 2026.10.19, chunk-F4ZU4RBE.js is 2026.10.19-2.
 // The lists only decide whether a --from-backups probe runs; an absent file is skipped.
@@ -556,12 +558,20 @@ function checkIntegration(row, opts, out) {
   const shimPath = path.join(extensionsDir, shim);
   const integrationRoot = path.join(opts.agentDir, product, "integration");
   let target = null;
+  let shimText = null;
   try {
-    const m = /export \{ default \} from ['"](\.\.\/[^'"]+)['"]/.exec(fs.readFileSync(shimPath, "utf8"));
-    if (m) target = path.resolve(extensionsDir, m[1]);
+    shimText = fs.readFileSync(shimPath, "utf8");
   } catch {
     out.installed.push({ status: "missing", label: shimPath, actual: null, expected: "managed shim" });
     return;
+  }
+  const m = /export \{ default \} from ['"](\.\.\/[^'"]+|file:\/\/\/[^'"]+)['"]/.exec(shimText);
+  if (m) {
+    try {
+      target = m[1].startsWith("file:") ? fileURLToPath(m[1]) : path.resolve(extensionsDir, m[1]);
+    } catch {
+      target = null; // malformed file URL: reported as drift below
+    }
   }
   const parts = target ? path.relative(integrationRoot, target).split(path.sep) : [];
   const generation = /^generation-\d{6}$/.test(parts[0] || "") ? parts[0] : null;
@@ -596,8 +606,9 @@ function checkIntegration(row, opts, out) {
     expected: "entry file",
   });
 
-  const hashes = record?.generation === generation && record.sha256 && typeof record.sha256 === "object"
-    ? Object.entries(record.sha256)
+  const recorded = record?.sha256 ?? record?.files;
+  const hashes = record?.generation === generation && recorded && typeof recorded === "object"
+    ? Object.entries(recorded)
     : [];
   if (hashes.length) {
     const bad = hashes.filter(([file, expected]) => {
@@ -965,6 +976,38 @@ export function makeRows() {
       integration: { shim: "omo-oracle-advisor.js", product: "oracle-advisor", current: "oracle-advisor/current.json" },
       discover: [`${AGENT}/extensions/omo-oracle-advisor.js`],
       manual: ["a new process registers the four oracle tools without a load error"],
+      installed: [],
+    },
+    {
+      name: "omo-primary-agents",
+      kind: "integration",
+      hint: "tracked",
+      location: "piomo-primary-agents (generation install, not yet installed)",
+      repoPath: PRIMARY,
+      sourcePaths: ["."],
+      integration: {
+        shim: "omo-primary-agents.js",
+        product: "primary-agents",
+        current: "primary-agents/integration/current.json",
+      },
+      discover: [`${AGENT}/extensions/omo-primary-agents.js`],
+      manual: ["a new process shows the four-agent label, Tab cycles them and /agent atlas switches"],
+      installed: [],
+    },
+    {
+      name: "omo-oracle-arsenal",
+      kind: "integration",
+      hint: "tracked",
+      location: "piomo-oracle-arsenal-mod (generation install, not yet installed)",
+      repoPath: ARSENAL,
+      sourcePaths: ["."],
+      integration: {
+        shim: "omo-oracle-arsenal.js",
+        product: "oracle-arsenal",
+        current: "oracle-arsenal/current.json",
+      },
+      discover: [`${AGENT}/extensions/omo-oracle-arsenal.js`],
+      manual: ["a new process answers /arsenal status and a worker dispatch shows a Loadout-armed Arsenal receipt"],
       installed: [],
     },
     {
