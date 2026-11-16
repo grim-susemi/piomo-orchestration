@@ -29,6 +29,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -673,6 +674,37 @@ function runJsonLine(command, args, prefix, timeout = 60000) {
 export function makeRows() {
   return [
     {
+      name: "luna-native-fallback-20261116",
+      hint: "tracked",
+      location: "custom-layer/luna-native-fallback-20261116",
+      repoPath: ORCH,
+      sourcePaths: ["patch.mjs", "probe.test.mjs", "original.js", "README.md"]
+        .map((name) => `custom-layer/luna-native-fallback-20261116/${name}`),
+      sourceFiles: ["patch.mjs", "probe.test.mjs", "original.js", "README.md"]
+        .map((name) => `${HERE}/luna-native-fallback-20261116/${name}`),
+      installed: [
+        { path: `${AGENT}/task-no-fallback-pkg/omo-task-no-fallback.js`, expected: "0d44f7d6a7ef6db3c8126983fa17d1a80c64f719d09d565a36e040952181ff99" },
+      ],
+      manual: ["On updates, run the designation-preservation and other-model-blocking probe against the unmodified guard before reapply or retirement. Existing verified runtime evidence is separate from this source ledger."],
+    },
+    {
+      name: "antigravity-hydrogen-tool-catalog",
+      hint: "tracked",
+      location: "custom-layer/antigravity-hydrogen-tool-catalog",
+      repoPath: ORCH,
+      sourcePaths: ["custom-layer/antigravity-hydrogen-tool-catalog"],
+      sourceFiles: [
+        `${HERE}/antigravity-hydrogen-tool-catalog/patch.mjs`,
+        `${HERE}/antigravity-hydrogen-tool-catalog/candidate.preload.mjs`,
+        `${HERE}/antigravity-hydrogen-tool-catalog/probe.test.mjs`,
+        `${HERE}/antigravity-hydrogen-tool-catalog/README.ko.md`,
+      ],
+      installed: [
+        { path: path.join(process.env.OMO_CHECK_OPENCODEX_ROOT || path.join(process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming"), "npm", "node_modules", "@bitkyc08", "opencodex"), "src", "adapters", "google.ts"), expected: "23993b1a091d6b1cbee8af2f7394969967aa5c47f022c21466ee9f0fb40376af" },
+      ],
+      manual: ["Run patch.mjs --ocx-root <root> --check; on official updates run the native Hydrogen tool proof before rederive/retire. Actual quick read tool verified 2026-11-16; source is maintained in this repository."],
+    },
+    {
       name: "plan-review-unlock",
       hint: "tracked",
       location: "custom-layer/plan-review-unlock",
@@ -784,11 +816,11 @@ export function makeRows() {
       repoPath: ORCH,
       discover: [`${AGENT}/task-no-fallback-pkg`],
       sourceBlobs: [
-        { path: "custom-layer/task-no-fallback-pkg/omo-task-no-fallback.js", expected: "38c425f04338441641980f6e8d3fa1993728072a2cf8cc1b6700f91e935de505" },
+        { path: "custom-layer/task-no-fallback-pkg/omo-task-no-fallback.js", expected: "0d44f7d6a7ef6db3c8126983fa17d1a80c64f719d09d565a36e040952181ff99" },
         { path: "custom-layer/task-no-fallback-pkg/package.json", expected: "1a14d2903c4174e5ca54becded10e7d99d74e97163e2c84e25d53cf191f39119" },
       ],
       installed: [
-        { path: `${AGENT}/task-no-fallback-pkg/omo-task-no-fallback.js`, expected: "38c425f04338441641980f6e8d3fa1993728072a2cf8cc1b6700f91e935de505" },
+        { path: `${AGENT}/task-no-fallback-pkg/omo-task-no-fallback.js`, expected: "0d44f7d6a7ef6db3c8126983fa17d1a80c64f719d09d565a36e040952181ff99" },
         { path: `${AGENT}/task-no-fallback-pkg/package.json`, expected: "1a14d2903c4174e5ca54becded10e7d99d74e97163e2c84e25d53cf191f39119" },
       ],
     },

@@ -13,3 +13,6 @@ custom-layer/memory-overlay/build/** -text
 custom-layer/senpi-freeze-fix/** text eol=lf
 custom-layer/senpi-stream-hash-leak/** text eol=lf
 custom-layer/plan-review-unlock/** text eol=lf
+custom-layer/antigravity-hydrogen-tool-catalog/** text eol=lf
+custom-layer/luna-native-fallback-20261116/** text eol=lf
+custom-layer/task-no-fallback-pkg/omo-task-no-fallback.js text eol=lf

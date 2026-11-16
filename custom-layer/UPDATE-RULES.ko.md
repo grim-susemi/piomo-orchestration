@@ -44,6 +44,25 @@
 
 ## 3. 행별 규칙
 
+### luna-native-fallback-20261116
+
+`task-no-fallback-pkg`의 현재 보존 소스와 설치 핀은 지정된 Luna low만 허용한 후보를 가리킨다.
+이전 blanket-block 원본은 이 델타의 `original.js`에 보존한다. 업데이트 때 원본 신원과
+`patch.mjs --check`를 확인하고 새 미수정 guard에 기존 지정 보존·다른 모델 차단 프로브를 적용한다.
+공식 원본이 모두 통과하면 은퇴하며, 해시가 다르면 재도출한다. 다른 패치 핀은 바꾸지 않는다.
+실제 모델 실행 영수증은 이미 수용됐으며 소스 보존 후속조치에서 반복하지 않는다.
+
+### antigravity-hydrogen-tool-catalog
+
+OpenCodex의 Hydrogen CCA 요청에 자동 추가되는 선택적 tool-catalog 지침만 제외한다.
+사용자 지침·메시지·실제 도구 선언·인증·모델·추론·안전 설정은 유지한다.
+`patch.mjs --ocx-root <root> --check`와 원장 설치 해시를 확인한다.
+업데이트된 공식 원본의 실제 Hydrogen 도구 실행이 성공하면 은퇴한다.
+실패하고 원본이 달라졌으면 새 해시·앵커를 도출한다. 알 수 없는 파일에 자동 적용하지 않는다.
+정상 재시작은 정확한 PID와 공식 drain 경로를 사용하고 실제 도구 결과로 로드를 검증한다.
+2026-11-16 원본 백업은 `.bak-piomo-hydrogen-tool-catalog`이며 관리형 소스는 이 저장소에서 보존한다.
+공개 재현 검사는 개인 경로 대신 `OPENCODEX_ROOT`로 검사할 패키지 루트를 받는다.
+
 ### memory-overlay (R19 → R21 메모리 거래 원복)
 
 원본 글로벌 번들을 직접 고치지 않는다. 다음 업데이트 때:
