@@ -159,6 +159,7 @@ export function reserve({
   launchKey,
   kind = "auto",
   ownerEventId,
+  allowStopped = false,
   beforeWrite,
   afterWrite,
 }) {
@@ -170,7 +171,10 @@ export function reserve({
     const existing = history.find((state) => state.launchKey === launchKey);
     if (existing) return { ok: true, state: existing, duplicate: true };
     const state = history[history.length - 1];
-    if (state.status === "stopped" || state.status === "stop-unknown") {
+    if (state.status === "stop-unknown") {
+      return { ok: false, reason: "STATE_STOPPED" };
+    }
+    if (state.status === "stopped" && !(kind === "manual" && allowStopped === true)) {
       return { ok: false, reason: "STATE_STOPPED" };
     }
     if (kind === "auto") {
