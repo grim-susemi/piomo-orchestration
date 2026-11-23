@@ -1,4 +1,4 @@
-import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, readdirSync, existsSync, rmSync } from "node:fs";
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, readdirSync, existsSync, rmSync, cpSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
@@ -6,6 +6,8 @@ import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import vm from "node:vm";
+import { writePatchedHost } from "../../patch.mjs";
+import { initialize, complete, logicalKey, markStop, readState } from "../../state.mjs";
 
 const FIXTURE = fileURLToPath(new URL("../fixtures/cases.json", import.meta.url));
 
@@ -287,15 +289,38 @@ function readTaskRecords(agent, workspace) {
 
 export async function runHostProbe(options = {}) {
   const variant = options.variant ?? "stock";
-  const packageRoot = options.packageRoot ?? DEFAULT_PATHS.packageRoot;
+  const candidate = variant === "candidate";
   const root = mkdtempSync(join(tmpdir(), "prc-host-"));
   const home = join(root, "home");
   const agent = join(home, ".omo", "agent");
   const workspace = join(root, "workspace");
+  const stateRoot = join(root, "state");
+  const packageRoot = options.packageRoot ?? (candidate ? join(root, "candidate-package") : DEFAULT_PATHS.packageRoot);
   mkdirSync(agent, { recursive: true });
   mkdirSync(join(workspace, ".omo", "plans"), { recursive: true });
   const planPath = join(workspace, ".omo", "plans", "fixture-plan.md");
   writeFileSync(planPath, "# Fixture plan\n\n- [ ] 1. Do the fixture work\n  QA: node --test fixture.test.mjs\n", "utf8");
+  const planSha256 = createHash("sha256").update(readFileSync(planPath)).digest("hex");
+  const workspaceId = "ws-fixture";
+  if (candidate) {
+    cpSync(DEFAULT_PATHS.packageRoot, packageRoot, { recursive: true });
+    writePatchedHost({
+      hostPath: join(packageRoot, "plugin", "extensions", "omo-task.js"),
+      extensionPath: fileURLToPath(new URL("../../extension.mjs", import.meta.url)),
+      outPath: join(packageRoot, "plugin", "extensions", "omo-task.js"),
+    });
+  }
+  if (options.stopState) {
+    initialize({
+      root: stateRoot,
+      workspaceId,
+      workspaceRoot: workspace,
+      planPath,
+      planSha256,
+      explicitLimit: options.explicitLimit,
+    });
+    markStop({ root: stateRoot, workspaceId, workspaceRoot: workspace, planPath, reason: options.stopState });
+  }
 
   let parentCalls = 0;
   let childCalls = 0;
@@ -322,9 +347,9 @@ export async function runHostProbe(options = {}) {
       if (parentCalls === 1) {
         return sseTool(res, { id: "call_parent_read", name: "read", arguments: JSON.stringify({ path: planPath }) });
       }
-      if (parentCalls === 2) {
+      if (parentCalls <= 1 + (options.rounds ?? 1)) {
         return sseTool(res, {
-          id: "call_parent_task",
+          id: `call_parent_task_${parentCalls}`,
           name: "task",
           arguments: JSON.stringify({
             subagent_type: "plan-reviewer",
@@ -392,6 +417,13 @@ export async function runHostProbe(options = {}) {
     PI_IMAGE_PROTOCOL: "none",
     NO_COLOR: "1",
     CI: "1",
+    PRC_STATE_ROOT: stateRoot,
+    PRC_WORKSPACE_ROOT: workspace,
+    PRC_WORKSPACE_ID: workspaceId,
+    PRC_EXPLICIT_LIMIT: options.explicitLimit === undefined ? undefined : String(options.explicitLimit),
+    PRC_PROGRESS_ALLOW: options.progressAllow ? "1" : "0",
+    PRC_SESSION_ID: "fixture-session",
+    PRC_GATE_LOG: join(root, "gate.log"),
   };
   const child = spawn(process.execPath, [
     join(packageRoot, "bin", "omo.js"),
@@ -413,15 +445,62 @@ export async function runHostProbe(options = {}) {
   server.close();
 
   const records = readTaskRecords(agent, workspace);
+  const budgetKey = logicalKey({ workspaceId, workspaceRoot: workspace, planPath }).key;
+  if (candidate && records.length > 0) {
+    const current = readState(stateRoot, budgetKey);
+    if (current?.status === "reserved" && current.launchKey && records[0]?.task_id) {
+      try {
+        complete({
+          root: stateRoot,
+          workspaceId,
+          workspaceRoot: workspace,
+          planPath,
+          launchKey: current.launchKey,
+          childReceiptId: records[0].task_id,
+        });
+      } catch {
+        // The native report still carries the observed task receipt.
+      }
+    }
+  }
+  const denials = new Set();
+  const walkSessions = (dir, depth) => {
+    if (depth > 5 || !existsSync(dir)) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walkSessions(path, depth + 1);
+      } else if (entry.name.endsWith(".jsonl")) {
+        try {
+          for (const match of readFileSync(path, "utf8").matchAll(/PRC_[A-Z_]+/gu)) {
+            denials.add(match[0]);
+          }
+        } catch {
+          // A session that cannot be read is not a denial receipt.
+        }
+      }
+    }
+  };
+  walkSessions(join(agent, "sessions"), 0);
+  const gateLogPath = join(root, "gate.log");
+  const gateLog = existsSync(gateLogPath)
+    ? readFileSync(gateLogPath, "utf8").trim().split("\n").filter(Boolean).map((line) => {
+      try { return JSON.parse(line); } catch { return { event: "unparsed", line }; }
+    })
+    : [];
+  const budgetState = readState(stateRoot, budgetKey);
   const verified = records.find((record) =>
     record.status === "completed"
     && typeof record.final_response === "string"
     && record.final_response.startsWith("[OKAY]"));
   const state = verified ? "verified" : records.length > 0 ? "failed" : "unobserved";
-  const hostBytes = readFileSync(DEFAULT_PATHS.host);
+  const hostBytes = readFileSync(candidate
+    ? join(packageRoot, "plugin", "extensions", "omo-task.js")
+    : DEFAULT_PATHS.host);
   const report = {
     caseId: "probe-real-entry",
     variant,
+    candidate,
     packageSha256: sha256Bytes(hostBytes),
     loadedModuleSha256: sha256Bytes(hostBytes),
     pluginSha256: sha256Bytes(readFileSync(DEFAULT_PATHS.plugin)),
@@ -433,6 +512,15 @@ export async function runHostProbe(options = {}) {
     childReceiptIds: records.map((record) => record.task_id),
     autoUsed: records.length > 0 ? 1 : 0,
     manualUsed: 0,
+    budgetState,
+    denials: [...denials],
+    gateLog,
+    taskRecords: records.map((record) => ({
+      task_id: record.task_id,
+      child_session_id: record.child_session_id,
+      status: record.status,
+      final_response: record.final_response,
+    })),
     state,
     reason: state === "verified"
       ? "the actual host spawned a plan-reviewer child and returned [OKAY]"
@@ -455,6 +543,8 @@ export async function runHostProbe(options = {}) {
       stderr: stderr.slice(-1500),
       tempRoot: root,
       independentHome: true,
+      stateRoot,
+      denials: [...denials],
     },
     finalResponse: verified?.final_response ?? null,
     childSessionId: verified?.child_session_id ?? null,
