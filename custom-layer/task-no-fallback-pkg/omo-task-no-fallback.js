@@ -31,7 +31,12 @@ export function stripRecordFallback(text) {
   }
   if (record === null || typeof record !== "object" || Array.isArray(record)) return text;
   if (typeof record.task_id !== "string" || !Object.hasOwn(record, "fallback_models")) return text;
-  delete record.fallback_models;
+  // Preserve only the owner's designated Luna low backup.
+  const designated = record.fallback_models.filter(model =>
+    model.provider === "chatgpt-subscription" && model.model_id === "gpt-6-luna" &&
+    (model.reasoning ?? model.reasoning_effort ?? model.variant) === "low");
+  if (designated.length === 0) delete record.fallback_models;
+  else record.fallback_models = designated;
   return JSON.stringify(record);
 }
 
@@ -54,7 +59,11 @@ export function installSettingsGuard(SettingsManager) {
   if (proto.getRetryFallbackSettings[MARK] === true) return false;
   const original = proto.getRetryFallbackSettings;
   const wrapped = function getRetryFallbackSettings() {
-    return { ...original.call(this), modelFallback: false };
+    const settings = original.call(this);
+    const chains = Object.fromEntries(Object.entries(settings.chains).map(([key, models]) =>
+      [key, models.filter(model => model === "chatgpt-subscription/gpt-6-luna:low")]));
+    return { ...settings, chains, modelFallback: settings.modelFallback &&
+      Object.values(chains).some(models => models.length > 0) };
   };
   Object.defineProperty(wrapped, MARK, { value: true });
   proto.getRetryFallbackSettings = wrapped;
