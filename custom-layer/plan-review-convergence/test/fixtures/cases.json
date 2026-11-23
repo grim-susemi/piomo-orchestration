@@ -1,0 +1,289 @@
+{
+  "schema": "plan-review-convergence/history/v1",
+  "currentPlanKey": "omo-5181-snapcompact-upgrade",
+  "notes": [
+    "Source references are provenance only; raw chat text is not copied here.",
+    "Hashes prefixed with recorded: are the hashes recorded in the session or receipt; their byte copies were not recovered.",
+    "The r83 and r84 hashes are the actual target digests recorded at reservation time."
+  ],
+  "history": [
+    {
+      "source": "C:/Users/USER/orca/projects/기타 작업/.omo/senpi-task/tasks/st_01a2037a.json",
+      "lineOrKey": "r65-verdict",
+      "event": "review-verdict",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r65",
+      "taskId": "st_01a2037a",
+      "sha": "recorded:r65-plan-sha",
+      "origin": "automatic-review",
+      "observed": {
+        "verdict": "REJECT",
+        "cause": "r26-reentry-self-execute",
+        "blockers": 1
+      }
+    },
+    {
+      "source": "C:/Users/USER/.omo-stable-500/home/.omo/agent/sessions/--C--Users-USER-orca-projects-기타 작업--/2026-11-22T05-32-10-795Z_01a201bd-92ab-701c-a7d8-3524549cf8f0.jsonl",
+      "lineOrKey": "J:4301",
+      "event": "goal-created",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r65",
+      "taskId": "st_01a2037a",
+      "sha": "recorded:r65-plan-sha",
+      "origin": "goal",
+      "observed": {
+        "goal": "resume plan-only review awaiting r65"
+      }
+    },
+    {
+      "source": "C:/Users/USER/orca/projects/기타 작업/.omo/senpi-task/tasks/st_01a203e4.json",
+      "lineOrKey": "r82-verdict",
+      "event": "review-verdict",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r82",
+      "taskId": "st_01a203e4",
+      "sha": "recorded:r82-plan-sha",
+      "origin": "automatic-review",
+      "observed": {
+        "verdict": "REJECT",
+        "cause": "r1-resume-live-order",
+        "blockers": 2
+      }
+    },
+    {
+      "source": "C:/Users/USER/.omo-stable-500/home/.omo/agent/sessions/--C--Users-USER-orca-projects-기타 작업--/2026-11-22T05-32-10-795Z_01a201bd-92ab-701c-a7d8-3524549cf8f0.jsonl",
+      "lineOrKey": "J:5816",
+      "event": "review-reservation",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r83",
+      "taskId": null,
+      "sha": "ab92ce5d927336a74dfdddd4c404db8e08ae7f378fcf0dd59e07245fe02ec5d1",
+      "origin": "automatic-review",
+      "observed": {
+        "review_round_limit": 83,
+        "status": "launching"
+      }
+    },
+    {
+      "source": "C:/Users/USER/.omo-stable-500/home/.omo/agent/sessions/--C--Users-USER-orca-projects-기타 작업--/2026-11-22T05-32-10-795Z_01a201bd-92ab-701c-a7d8-3524549cf8f0.jsonl",
+      "lineOrKey": "J:5827-5831",
+      "event": "review-launch",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r83",
+      "taskId": "st_01a203eb",
+      "sha": "ab92ce5d927336a74dfdddd4c404db8e08ae7f378fcf0dd59e07245fe02ec5d1",
+      "origin": "automatic-review",
+      "observed": {
+        "limit": 83,
+        "child": "st_01a203eb",
+        "accepted": true
+      }
+    },
+    {
+      "source": "C:/Users/USER/.omo-stable-500/home/.omo/agent/sessions/--C--Users-USER-orca-projects-기타 작업--/2026-11-22T05-32-10-795Z_01a201bd-92ab-701c-a7d8-3524549cf8f0.jsonl",
+      "lineOrKey": "J:5893",
+      "event": "compaction",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r83",
+      "taskId": "st_01a203eb",
+      "sha": "ab92ce5d927336a74dfdddd4c404db8e08ae7f378fcf0dd59e07245fe02ec5d1",
+      "origin": "harness",
+      "observed": {
+        "during": "r83"
+      }
+    },
+    {
+      "source": "C:/Users/USER/orca/projects/기타 작업/.omo/senpi-task/tasks/st_01a203eb.json",
+      "lineOrKey": "r83-verdict",
+      "event": "review-verdict",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r83",
+      "taskId": "st_01a203eb",
+      "sha": "ab92ce5d927336a74dfdddd4c404db8e08ae7f378fcf0dd59e07245fe02ec5d1",
+      "origin": "automatic-review",
+      "observed": {
+        "verdict": "REJECT",
+        "cause": "gateway-direct-sdk-before-unlock",
+        "blockers": 1,
+        "targetSha": "ab92ce5d927336a74dfdddd4c404db8e08ae7f378fcf0dd59e07245fe02ec5d1"
+      }
+    },
+    {
+      "source": "C:/Users/USER/.omo-stable-500/home/.omo/agent/sessions/--C--Users-USER-orca-projects-기타 작업--/2026-11-22T05-32-10-795Z_01a201bd-92ab-701c-a7d8-3524549cf8f0.jsonl",
+      "lineOrKey": "J:5931",
+      "event": "review-stop",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r83",
+      "taskId": "st_01a203eb",
+      "sha": "ab92ce5d927336a74dfdddd4c404db8e08ae7f378fcf0dd59e07245fe02ec5d1",
+      "origin": "harness",
+      "observed": {
+        "round_status": "changes_requested",
+        "pending": "automatic review stopped"
+      }
+    },
+    {
+      "source": "C:/Users/USER/.omo-stable-500/home/.omo/agent/sessions/--C--Users-USER-orca-projects-기타 작업--/2026-11-22T05-32-10-795Z_01a201bd-92ab-701c-a7d8-3524549cf8f0.jsonl",
+      "lineOrKey": "J:5957-5966",
+      "event": "owner-question",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r83",
+      "taskId": "st_01a203eb",
+      "sha": "ab92ce5d927336a74dfdddd4c404db8e08ae7f378fcf0dd59e07245fe02ec5d1",
+      "origin": "owner-question",
+      "observed": {
+        "requestId": "call_wcx9TOMvxQbiw7kR66fZCVu2",
+        "options": ["한 건만 수정"]
+      }
+    },
+    {
+      "source": "C:/Users/USER/.omo-stable-500/home/.omo/agent/sessions/--C--Users-USER-orca-projects-기타 작업--/2026-11-22T05-32-10-795Z_01a201bd-92ab-701c-a7d8-3524549cf8f0.jsonl",
+      "lineOrKey": "J:5970",
+      "event": "owner-answer",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r83",
+      "taskId": "st_01a203eb",
+      "sha": "ab92ce5d927336a74dfdddd4c404db8e08ae7f378fcf0dd59e07245fe02ec5d1",
+      "origin": "owner-answer",
+      "observed": {
+        "questionId": "call_wcx9TOMvxQbiw7kR66fZCVu2",
+        "answer": "r83 후속: 한 건만 수정",
+        "ownerAuthorized": true,
+        "scope": "one_review"
+      }
+    },
+    {
+      "source": "C:/Users/USER/.omo-stable-500/home/.omo/agent/sessions/--C--Users-USER-orca-projects-기타 작업--/2026-11-22T05-32-10-795Z_01a201bd-92ab-701c-a7d8-3524549cf8f0.jsonl",
+      "lineOrKey": "J:6055",
+      "event": "goal-continuation",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r83",
+      "taskId": null,
+      "sha": "ab92ce5d927336a74dfdddd4c404db8e08ae7f378fcf0dd59e07245fe02ec5d1",
+      "origin": "goal-continuation",
+      "observed": {
+        "automatic": true,
+        "ownerAuthorized": false
+      }
+    },
+    {
+      "source": "C:/Users/USER/.omo-stable-500/home/.omo/agent/sessions/--C--Users-USER-orca-projects-기타 작업--/2026-11-22T05-32-10-795Z_01a201bd-92ab-701c-a7d8-3524549cf8f0.jsonl",
+      "lineOrKey": "J:6065",
+      "event": "review-reservation",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r84",
+      "taskId": null,
+      "sha": "eb4ca4d44500914365f5886c37c000ba52b3df1fe387fff16cde7b724ba0640e",
+      "origin": "owner-answer",
+      "observed": {
+        "review_round_limit": 84,
+        "pending": "owner-authorized single r84 review",
+        "ownerAuthorized": true,
+        "automaticBudget": false,
+        "hashBound": false
+      }
+    },
+    {
+      "source": "C:/Users/USER/.omo-stable-500/home/.omo/agent/sessions/--C--Users-USER-orca-projects-기타 작업--/2026-11-22T05-32-10-795Z_01a201bd-92ab-701c-a7d8-3524549cf8f0.jsonl",
+      "lineOrKey": "J:6069-6073",
+      "event": "review-launch",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r84",
+      "taskId": "st_01a203f7",
+      "sha": "eb4ca4d44500914365f5886c37c000ba52b3df1fe387fff16cde7b724ba0640e",
+      "origin": "owner-answer",
+      "observed": {
+        "limit": 84,
+        "child": "st_01a203f7",
+        "accepted": true,
+        "ownerAuthorized": true,
+        "hashBound": false
+      }
+    },
+    {
+      "source": "C:/Users/USER/orca/projects/기타 작업/.omo/senpi-task/tasks/st_01a203d3.json",
+      "lineOrKey": "role-plan-verdict",
+      "event": "review-verdict",
+      "planKey": "piomo-three-role-routing",
+      "round": "role-plan-review",
+      "taskId": "st_01a203d3",
+      "sha": "recorded:role-plan-sha",
+      "origin": "automatic-review",
+      "observed": {
+        "verdict": "REJECT",
+        "cause": "upgrade-evidence-missing"
+      }
+    },
+    {
+      "source": "C:/Users/USER/orca/projects/기타 작업/.omo/senpi-task/tasks/st_01a203fe.json",
+      "lineOrKey": "convergence-plan-verdict",
+      "event": "review-verdict",
+      "planKey": "ulw-plan-review-convergence",
+      "round": "plan-review",
+      "taskId": "st_01a203fe",
+      "sha": "recorded:convergence-plan-sha",
+      "origin": "automatic-review",
+      "observed": {
+        "verdict": "REJECT",
+        "cause": "missing-real-review-path"
+      }
+    },
+    {
+      "source": "synthetic",
+      "lineOrKey": "synthetic-same-cause-other-plan",
+      "event": "review-verdict",
+      "planKey": "ulw-plan-review-convergence",
+      "round": "plan-review",
+      "taskId": null,
+      "sha": null,
+      "origin": "synthetic",
+      "observed": {
+        "verdict": "REJECT",
+        "cause": "gateway-direct-sdk-before-unlock"
+      }
+    },
+    {
+      "source": "synthetic",
+      "lineOrKey": "synthetic-same-plan-duplicate",
+      "event": "review-verdict",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r83",
+      "taskId": null,
+      "sha": "ab92ce5d927336a74dfdddd4c404db8e08ae7f378fcf0dd59e07245fe02ec5d1",
+      "origin": "synthetic",
+      "observed": {
+        "verdict": "REJECT",
+        "cause": "gateway-direct-sdk-before-unlock"
+      }
+    },
+    {
+      "source": "synthetic",
+      "lineOrKey": "synthetic-unknown-parent",
+      "event": "review-verdict",
+      "planKey": null,
+      "round": null,
+      "taskId": null,
+      "sha": null,
+      "origin": "automatic-review",
+      "observed": {
+        "verdict": "REJECT",
+        "note": "same parent session only"
+      }
+    },
+    {
+      "source": "synthetic",
+      "lineOrKey": "synthetic-answer-without-question",
+      "event": "owner-answer",
+      "planKey": "omo-5181-snapcompact-upgrade",
+      "round": "r84",
+      "taskId": null,
+      "sha": "eb4ca4d44500914365f5886c37c000ba52b3df1fe387fff16cde7b724ba0640e",
+      "origin": "owner-answer",
+      "observed": {
+        "questionId": null,
+        "answer": "한 건만 수정",
+        "ownerAuthorized": true
+      }
+    }
+  ]
+}
