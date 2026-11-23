@@ -2,6 +2,7 @@ import { readFileSync, appendFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { initialize, logicalKey, readState, reserve, resolveBudget } from "./state.mjs";
+import { reserveManual } from "./owner-resume.mjs";
 
 function planPathFromPrompt(prompt) {
   if (typeof prompt !== "string") return null;
@@ -81,6 +82,25 @@ export function gate(e, t, n, r) {
 
   const state = readState(stateRoot, key);
   if (!state) return deny("PRC_STATE_MISSING");
+  const questionId = process.env.PRC_MANUAL_QUESTION_ID;
+  const eventId = process.env.PRC_MANUAL_EVENT_ID;
+  const launchKey = `${process.env.PRC_SESSION_ID ?? "host"}:${state.revision}:${Date.now()}`;
+  if (questionId && eventId) {
+    const manual = reserveManual({
+      root: stateRoot,
+      questionId,
+      eventId,
+      workspaceId,
+      workspaceRoot,
+      planPath: absolute,
+      planSha256,
+      roundNo: (state.roundNo ?? 0) + 1,
+      launchKey,
+    });
+    if (!manual.ok) return deny(`PRC_${manual.reason}`);
+    logGate({ event: "allow-manual", key, launchKey });
+    return undefined;
+  }
   if (state.status === "stop-unknown" || state.status === "stopped") {
     return deny("PRC_STOPPED");
   }
@@ -88,7 +108,6 @@ export function gate(e, t, n, r) {
     return deny("PRC_NO_PROGRESS");
   }
 
-  const launchKey = `${process.env.PRC_SESSION_ID ?? "host"}:${state.revision}:${Date.now()}`;
   const result = reserve({
     root: stateRoot,
     workspaceId,

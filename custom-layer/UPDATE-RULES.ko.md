@@ -62,6 +62,12 @@
 이웃 손상은 계속 drift다. adapter 재생성 → plan-review → owned-work 순서로 관리한다.
 fixture 검증·등록 완료·디스크 적용·새 process 로드·실제 runtime 수용은 각각 별도다.
 
+### plan-review-convergence (검토 예산·재개·수납·인계 후보)
+
+2026-11-23 구현 후보. 설치·활성화하지 않는다. `patch.mjs`는 격리 패키지 사본에서만 `--check`/적용하고, 실제 소유자 메시지·인계 소비 표면은 `BLOCKED_NO_BOUNDARY`다.
+
+업데이트 때 stock/candidate의 같은 native 케이스를 재생해 `maintenance.mjs`의 `classifyMaintenance`로 `candidate-pass`·`official-conforms-retire-candidate`·`needs-review`를 구분한다. 앵커·대상 해시·근거가 불완전하면 `needs-review`이며 자동 적용·롤백하지 않는다. 공식이 모든 실제 케이스를 충족할 때만 은퇴를 추천한다.
+
 ### memory-overlay (R19 → R21 메모리 거래 원복)
 
 원본 글로벌 번들을 직접 고치지 않는다. 다음 업데이트 때:

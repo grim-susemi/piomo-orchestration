@@ -3,11 +3,12 @@ import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import vm from "node:vm";
 import { writePatchedHost } from "../../patch.mjs";
-import { initialize, complete, logicalKey, markStop, readState } from "../../state.mjs";
+import { initialize, complete, logicalKey, markStop, readState, reserve } from "../../state.mjs";
+import { bindAnswer, createQuestion } from "../../owner-resume.mjs";
 
 const FIXTURE = fileURLToPath(new URL("../fixtures/cases.json", import.meta.url));
 
@@ -310,7 +311,35 @@ export async function runHostProbe(options = {}) {
       outPath: join(packageRoot, "plugin", "extensions", "omo-task.js"),
     });
   }
-  if (options.stopState) {
+  let manualQuestionId = "";
+  let manualEventId = "";
+  if (options.manual) {
+    initialize({
+      root: stateRoot,
+      workspaceId,
+      workspaceRoot: workspace,
+      planPath,
+      planSha256,
+      explicitLimit: options.explicitLimit,
+    });
+    reserve({ root: stateRoot, workspaceId, workspaceRoot: workspace, planPath, planSha256, launchKey: "r83" });
+    complete({ root: stateRoot, workspaceId, workspaceRoot: workspace, planPath, launchKey: "r83", childReceiptId: "st_r83" });
+    markStop({ root: stateRoot, workspaceId, workspaceRoot: workspace, planPath, reason: "REJECT" });
+    const key = logicalKey({ workspaceId, workspaceRoot: workspace, planPath }).key;
+    const manualState = readState(stateRoot, key);
+    const question = createQuestion({
+      root: stateRoot,
+      W: key,
+      stoppedRevision: manualState.revision,
+      reviewedSha: options.manual.prehash ? null : (options.manual.reviewedSha ?? "0".repeat(64)),
+      currentSha: options.manual.prehash ? null : (options.manual.currentSha ?? planSha256),
+      remainingReason: "REJECT",
+      planPath,
+    });
+    manualQuestionId = question.questionId;
+    manualEventId = options.manual.eventId ?? "owner-event-1";
+    bindAnswer({ root: stateRoot, questionId: manualQuestionId, eventId: manualEventId, source: "owner" });
+  } else if (options.stopState) {
     initialize({
       root: stateRoot,
       workspaceId,
@@ -424,6 +453,8 @@ export async function runHostProbe(options = {}) {
     PRC_PROGRESS_ALLOW: options.progressAllow ? "1" : "0",
     PRC_SESSION_ID: "fixture-session",
     PRC_GATE_LOG: join(root, "gate.log"),
+    PRC_MANUAL_QUESTION_ID: manualQuestionId,
+    PRC_MANUAL_EVENT_ID: manualEventId,
   };
   const child = spawn(process.execPath, [
     join(packageRoot, "bin", "omo.js"),
@@ -439,10 +470,20 @@ export async function runHostProbe(options = {}) {
   let timedOut = false;
   child.stdout.on("data", (data) => { stdout += data; });
   child.stderr.on("data", (data) => { stderr += data; });
-  const timer = setTimeout(() => { timedOut = true; child.kill(); }, 90000);
-  const exit = await new Promise((resolve) => { child.on("close", (code) => resolve(code)); });
+  const timer = setTimeout(() => {
+    timedOut = true;
+    if (process.platform === "win32" && child.pid) {
+      spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true });
+    } else {
+      child.kill();
+    }
+  }, 90000);
+  const exit = await new Promise((resolve) => { child.on("exit", (code) => resolve(code)); });
   clearTimeout(timer);
+  child.stdout?.destroy();
+  child.stderr?.destroy();
   server.close();
+  server.closeAllConnections?.();
 
   const records = readTaskRecords(agent, workspace);
   const budgetKey = logicalKey({ workspaceId, workspaceRoot: workspace, planPath }).key;
