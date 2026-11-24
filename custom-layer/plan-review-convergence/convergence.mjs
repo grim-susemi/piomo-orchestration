@@ -25,22 +25,6 @@ export function makeCauseKey({ requirementId, predicateId, boundaryId, failureCl
   return [requirementId, predicateId, boundaryId, failureClass].join("|");
 }
 
-function lineAt(snapshot, line) {
-  const lines = snapshot.text.split("\n");
-  return Number.isInteger(line) && line >= 1 && line <= lines.length ? lines[line - 1] : null;
-}
-
-export function contradictionPresent(snapshot, witness) {
-  if (!snapshot || !witness || witness.kind !== "contradiction") return false;
-  if (witness.expectedA === undefined || witness.expectedA === witness.expectedB) return false;
-  const first = lineAt(snapshot, witness.lineA);
-  const second = lineAt(snapshot, witness.lineB);
-  if (first === null || second === null) return false;
-  const hasFirst = (witness.tokensA ?? []).every((token) => first.includes(token));
-  const hasSecond = (witness.tokensB ?? []).every((token) => second.includes(token));
-  return hasFirst && hasSecond;
-}
-
 function spanText(rawResponse, span) {
   if (!Array.isArray(span) || span.length !== 2) return null;
   const [start, end] = span;
@@ -83,6 +67,64 @@ function result(finding, classification, reason, extra = {}) {
   };
 }
 
+/**
+ * The reviewer owns the blocker key.  This module never parses the plan text or
+ * compares words; it only reads the structured finding fields the reviewer/writer
+ * submitted.  A finding with the same key in the next round is the same blocker.
+ */
+export function findingKeys(findings) {
+  const keys = [];
+  for (const finding of Array.isArray(findings) ? findings : []) {
+    let key = typeof finding?.causeKey === "string" ? finding.causeKey : null;
+    if (!key) {
+      try {
+        key = makeCauseKey(finding ?? {});
+      } catch {
+        key = null;
+      }
+    }
+    if (key && !keys.includes(key)) keys.push(key);
+  }
+  return keys;
+}
+
+/**
+ * Progress is the next round's review result, not a text judgment.
+ *   reserved: the bound REJECT receipt for the round that stopped the loop.
+ *   next:     the following reviewer receipt.
+ * Same blocker key -> SAME_BLOCKER.  A different key set -> allow.  APPROVED ->
+ * allow.  No next receipt/result -> NO_REVIEW_RESULT.
+ */
+export function nextRoundProgress({ reserved, next, W = null } = {}) {
+  if (!reserved) return { allow: false, reason: "NO_BOUND_RECEIPT" };
+  if (reserved.status !== "CHANGES_REQUESTED" || reserved.verdict !== "REJECT") {
+    return { allow: false, reason: "NO_REJECTION" };
+  }
+  if (W && reserved.W && reserved.W !== W) return { allow: false, reason: "WORKSPACE_MISMATCH" };
+  if (!next) return { allow: false, reason: "NO_REVIEW_RESULT" };
+  if (W && next.W && next.W !== W) return { allow: false, reason: "WORKSPACE_MISMATCH" };
+  if (next.status === "APPROVED") {
+    return { allow: true, reason: "APPROVED", reservedKeys: findingKeys(reserved.findings), nextKeys: findingKeys(next.findings) };
+  }
+  if (next.status !== "CHANGES_REQUESTED" || next.verdict !== "REJECT") {
+    return { allow: false, reason: "NO_REVIEW_RESULT" };
+  }
+  const keysOf = (value) => {
+    const display = findingKeys(value?.findings);
+    return display.length > 0 ? display : findingKeys(value?.responseFindings);
+  };
+  const reservedKeys = keysOf(reserved);
+  const nextKeys = keysOf(next);
+  if (reservedKeys.length === 0 || nextKeys.length === 0) {
+    return { allow: false, reason: "NO_STRUCTURED_FINDINGS", reservedKeys, nextKeys };
+  }
+  const sameKeys = nextKeys.filter((key) => reservedKeys.includes(key));
+  if (sameKeys.length > 0) {
+    return { allow: false, reason: "SAME_BLOCKER", sameKeys, reservedKeys, nextKeys };
+  }
+  return { allow: true, reason: "NEW_BLOCKER_KEYS", reservedKeys, nextKeys };
+}
+
 export class ConvergenceLedger {
   constructor({ W, planSha256, requirements = REQUIREMENTS, predicates = PREDICATES, boundaries = BOUNDARIES, failureClasses = FAILURE_CLASSES }) {
     this.W = W;
@@ -92,9 +134,7 @@ export class ConvergenceLedger {
     this.boundaries = boundaries;
     this.failureClasses = failureClasses;
     this.open = new Map();
-    this.closed = new Map();
     this.baselineBuilt = false;
-    this.reject = null;
     this.rounds = [];
   }
 
@@ -125,15 +165,15 @@ export class ConvergenceLedger {
     if (!verifyEvidence(snapshot, finding.evidenceRefs)) {
       return result(finding, "evidence-unconfirmed", "EVIDENCE_REF_MISMATCH");
     }
-    if (finding.failureClass === "contradiction") {
-      if (!contradictionPresent(snapshot, finding.witness)) {
-        return result(finding, "evidence-unconfirmed", "WITNESS_NOT_REPRODUCED");
-      }
-    } else if (!finding.reproduction || typeof finding.reproduction !== "object") {
-      return result(finding, "evidence-unconfirmed", "REPRODUCTION_REQUIRED");
+    // The reviewer's structured finding is the only source of a blocker key.
+    // Contradiction findings still need a structured witness object, but this
+    // module does not compare the plan's words or polarity.
+    if (finding.failureClass === "contradiction"
+      && (!finding.witness || typeof finding.witness !== "object")) {
+      return result(finding, "evidence-unconfirmed", "WITNESS_MISSING");
     }
     const causeKey = makeCauseKey(finding);
-    if (this.open.has(causeKey) || this.closed.has(causeKey)) {
+    if (this.open.has(causeKey)) {
       return result(finding, "duplicate", "CAUSE_KEY_ALREADY_KNOWN", { causeKey, duplicateOf: causeKey });
     }
     if (this.baselineBuilt && !finding.newKeyReason) {
@@ -144,13 +184,22 @@ export class ConvergenceLedger {
 
   startRound({ receipt, snapshot, findings }) {
     this.baselineBuilt = false;
-    this.reject = { receipt, snapshot };
-    const evaluated = findings.map((finding) => this.evaluate(finding, receipt, snapshot));
-    for (const item of evaluated) {
+    const evaluated = [];
+    for (const finding of findings) {
+      const item = this.evaluate(finding, receipt, snapshot);
       if (item.classification === "actual-blocker") this.open.set(item.causeKey, item);
+      evaluated.push(item);
     }
     this.baselineBuilt = true;
-    this.rounds.push({ receipt, snapshot, findings: evaluated });
+    this.rounds.push({
+      receipt,
+      snapshotSha256: snapshot.sha256,
+      taskId: receipt?.taskId ?? null,
+      roundId: receipt?.roundId ?? null,
+      responseSha256: receipt?.responseSha256 ?? null,
+      findings: evaluated,
+      openKeys: [...this.open.keys()],
+    });
     return {
       status: this.open.size === 0 ? "STOP_NO_PROGRESS" : "changes_requested",
       findings: evaluated,
@@ -161,11 +210,21 @@ export class ConvergenceLedger {
 
   addRound({ receipt, snapshot, findings }) {
     if (!this.baselineBuilt) return this.startRound({ receipt, snapshot, findings });
-    const evaluated = findings.map((finding) => this.evaluate(finding, receipt, snapshot));
-    for (const item of evaluated) {
+    const evaluated = [];
+    for (const finding of findings) {
+      const item = this.evaluate(finding, receipt, snapshot);
       if (item.classification === "actual-blocker") this.open.set(item.causeKey, item);
+      evaluated.push(item);
     }
-    this.rounds.push({ receipt, snapshot, findings: evaluated });
+    this.rounds.push({
+      receipt,
+      snapshotSha256: snapshot.sha256,
+      taskId: receipt?.taskId ?? null,
+      roundId: receipt?.roundId ?? null,
+      responseSha256: receipt?.responseSha256 ?? null,
+      findings: evaluated,
+      openKeys: [...this.open.keys()],
+    });
     return {
       status: this.open.size === 0 ? "STOP_NO_PROGRESS" : "changes_requested",
       findings: evaluated,
@@ -174,43 +233,65 @@ export class ConvergenceLedger {
     };
   }
 
-  resolve({ causeKey, witness, revisedSnapshot, revisedSha }) {
-    if (!this.open.has(causeKey)) return { ok: false, reason: "UNKNOWN_KEY" };
-    if (!revisedSnapshot || revisedSnapshot.sha256 === this.reject?.snapshot?.sha256) {
-      return { ok: false, reason: "NO_NEW_SHA" };
-    }
-    if (revisedSha !== revisedSnapshot.sha256) return { ok: false, reason: "REVISED_SHA_MISMATCH" };
-    if (!contradictionPresent(this.reject?.snapshot, witness)) {
-      return { ok: false, reason: "PAST_NOT_REPRODUCED" };
-    }
-    if (contradictionPresent(revisedSnapshot, witness)) {
-      return { ok: false, reason: "STILL_PRESENT" };
-    }
-    const item = this.open.get(causeKey);
-    this.open.delete(causeKey);
-    this.closed.set(causeKey, { ...item, resolvedSha: revisedSha });
-    return { ok: true, causeKey, revisedSha };
+  /**
+   * The single production entry point for a receipt.  The first round builds the
+   * baseline; every later round is added to the same ledger so a persisted key
+   * keeps its identity across rounds instead of being re-created per call.
+   */
+  recordRound({ receipt, snapshot, findings }) {
+    return this.baselineBuilt
+      ? this.addRound({ receipt, snapshot, findings })
+      : this.startRound({ receipt, snapshot, findings });
   }
 
-  autoEligibility({ newSha, previousSha, budgetRemaining, stopped, goalOk, scopeOk, hasProgress }) {
-    if (stopped) return { allow: false, reason: "STOPPED" };
-    if (!goalOk || !scopeOk) return { allow: false, reason: "STOP_SCOPE" };
-    if (!Number.isInteger(budgetRemaining) || budgetRemaining <= 0) {
-      return { allow: false, reason: "STOP_BUDGET" };
-    }
-    if (!hasProgress || this.closed.size === 0) return { allow: false, reason: "STOP_NO_PROGRESS" };
-    if (!newSha || newSha === previousSha) return { allow: false, reason: "STOP_NO_NEW_SHA" };
-    return { allow: true, reason: "ALLOW" };
-  }
-
-  summary() {
+  roundForReceipt(taskId, responseSha256) {
+    if (!taskId) return null;
+    const round = [...this.rounds].reverse().find((entry) => entry.taskId === taskId
+      && (responseSha256 === undefined || entry.responseSha256 === responseSha256));
+    if (!round) return null;
     return {
+      status: round.openKeys.length === 0 ? "STOP_NO_PROGRESS" : "changes_requested",
+      findings: round.findings,
+      openKeys: round.openKeys,
+      autoProgress: 0,
+    };
+  }
+
+  openKeys() {
+    return [...this.open.keys()];
+  }
+
+  toJSON() {
+    return {
+      schema: "plan-review-convergence/convergence-ledger/v2",
       W: this.W,
       planSha256: this.planSha256,
-      open: [...this.open.values()],
-      closed: [...this.closed.values()],
-      reject: this.reject,
-      rounds: this.rounds.length,
+      baselineBuilt: this.baselineBuilt,
+      open: [...this.open.entries()].map(([causeKey, item]) => ({ causeKey, item })),
+      rounds: this.rounds.map((round) => ({
+        taskId: round.taskId ?? round.receipt?.taskId ?? null,
+        roundId: round.roundId ?? round.receipt?.roundId ?? null,
+        responseSha256: round.responseSha256 ?? round.receipt?.responseSha256 ?? null,
+        snapshotSha256: round.snapshotSha256 ?? round.snapshot?.sha256 ?? null,
+        openKeys: Array.isArray(round.openKeys) ? round.openKeys : [],
+        findings: Array.isArray(round.findings) ? round.findings : [],
+      })),
     };
+  }
+
+  static fromJSON(json) {
+    if (!json || json.schema !== "plan-review-convergence/convergence-ledger/v2") return null;
+    const ledger = new ConvergenceLedger({ W: json.W, planSha256: json.planSha256 });
+    ledger.baselineBuilt = json.baselineBuilt === true;
+    for (const entry of json.open ?? []) ledger.open.set(entry.causeKey, entry.item);
+    ledger.rounds = (json.rounds ?? []).map((round) => ({
+      taskId: round.taskId ?? null,
+      roundId: round.roundId ?? null,
+      responseSha256: round.responseSha256 ?? null,
+      snapshotSha256: round.snapshotSha256 ?? null,
+      openKeys: Array.isArray(round.openKeys) ? round.openKeys : [],
+      findings: Array.isArray(round.findings) ? round.findings : [],
+    }));
+    return ledger;
   }
 }

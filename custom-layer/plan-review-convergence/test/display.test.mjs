@@ -71,6 +71,7 @@ test("handoff H0 is APPROVED only for the current bytes", () => {
     reviewedSnapshotRef: "snapshot:h0",
     roundId: "r90",
     taskId: "st_ok",
+    childSessionId: "child-h0",
   };
   const status = handoffStatus({ receipt, currentSha: "sha-h0", planPath: PLAN });
   assert.equal(status.reviewStatus, "APPROVED");
@@ -103,6 +104,7 @@ test("handoff restores only after a new receipt matches the newly read bytes", (
     reviewedSnapshotRef: "snapshot:h0",
     roundId: "r90",
     taskId: "st_ok",
+    childSessionId: "child-h0",
   };
   assert.equal(
     handoffStatus({ receipt: oldReceipt, currentSha: "sha-h1", planPath: PLAN }).reason,
@@ -115,6 +117,7 @@ test("handoff restores only after a new receipt matches the newly read bytes", (
     reviewedSnapshotRef: "snapshot:h1",
     roundId: "r91",
     taskId: "st_new",
+    childSessionId: "child-h1",
   };
   const restored = handoffStatus({ receipt: newReceipt, currentSha: "sha-h1", planPath: PLAN });
   assert.equal(restored.reviewStatus, "APPROVED");

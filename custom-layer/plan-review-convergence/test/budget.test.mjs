@@ -24,7 +24,12 @@ function base(t) {
 }
 
 function init(options, extra = {}) {
-  return initialize({ ...options, planSha256: "a".repeat(64), ...extra });
+  return initialize({
+    ...options,
+    planSha256: "a".repeat(64),
+    firstRequest: { eventId: "spawn:test", promptSha256: "f".repeat(64) },
+    ...extra,
+  });
 }
 
 function state(options) {
@@ -46,6 +51,25 @@ function runWorker(options) {
   });
 }
 
+test("initialize requires an observed first request, not a bare init", (t) => {
+  const options = base(t);
+  const rejected = initialize({ ...options, planSha256: "a".repeat(64) });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.reason, "FIRST_REQUEST_REQUIRED");
+  const badDigest = initialize({
+    ...options,
+    planSha256: "a".repeat(64),
+    firstRequest: { eventId: "spawn:test", promptSha256: "not-a-digest" },
+  });
+  assert.equal(badDigest.reason, "FIRST_REQUEST_INVALID");
+  assert.equal(state(options), null);
+
+  const created = init(options, { explicitLimit: 1 });
+  assert.equal(created.created, true);
+  assert.equal(created.state.firstRequestEventId, "spawn:test");
+  assert.equal(created.state.firstRequestPromptSha256, "f".repeat(64));
+});
+
 test("reserve-compete-final-token: two workers share one final token", async (t) => {
   const options = base(t);
   assert.equal(init(options, { explicitLimit: 1 }).state.B, 1);
@@ -56,18 +80,18 @@ test("reserve-compete-final-token: two workers share one final token", async (t)
   ]);
   const results = [first, second].map((entry) => entry.result);
   const winners = results.filter((result) => result?.ok === true);
-  const exhausted = results.filter((result) => result?.reason === "BUDGET_EXHAUSTED");
+  const blocked = results.filter((result) =>
+    ["BUDGET_EXHAUSTED", "UNRESOLVED_LAUNCH"].includes(result?.reason));
   assert.equal(winners.length, 1, JSON.stringify(results));
-  assert.equal(exhausted.length, 1);
+  assert.equal(blocked.length, 1, JSON.stringify(results));
   const current = state(options);
   assert.equal(current.U, 1);
   assert.equal(current.autoUsed, 1);
   assert.equal(current.manualUsed, 0);
   assert.equal(current.B, 1);
-  assert.equal(winners.length, 1); // one child launch
 });
 
-test("reserve-crash: before record, after record, after launch before response", (t) => {
+test("reserve-crash: an unresolved reservation blocks a second launch until completed", (t) => {
   const before = base(t);
   init(before, { explicitLimit: 1 });
   assert.throws(
@@ -89,21 +113,18 @@ test("reserve-crash: before record, after record, after launch before response",
   assert.equal(state(afterRecord).childReceiptId, null);
   assert.equal(
     reserve({ ...afterRecord, planSha256: "a".repeat(64), launchKey: "retry" }).reason,
-    "BUDGET_EXHAUSTED",
+    "UNRESOLVED_LAUNCH",
   );
-
-  const afterLaunch = base(t);
-  init(afterLaunch, { explicitLimit: 1 });
-  let children = 0;
-  assert.equal(reserve({ ...afterLaunch, planSha256: "a".repeat(64), launchKey: "launched" }).ok, true);
-  children += 1; // the caller launched the child, then lost the response
-  assert.equal(state(afterLaunch).U, 1);
-  assert.equal(state(afterLaunch).childReceiptId, null);
+  const recovered = complete({
+    ...afterRecord,
+    launchKey: "record",
+    childReceiptId: "st_record",
+  });
+  assert.equal(recovered.ok, true);
   assert.equal(
-    reserve({ ...afterLaunch, planSha256: "a".repeat(64), launchKey: "retry-after-launch" }).reason,
+    reserve({ ...afterRecord, planSha256: "b".repeat(64), launchKey: "retry" }).reason,
     "BUDGET_EXHAUSTED",
   );
-  assert.equal(children, 1);
 });
 
 test("cap-edit-alias: default 5, explicit 1, and aliases share the same key", (t) => {
@@ -135,6 +156,7 @@ test("cap-edit-alias: default 5, explicit 1, and aliases share the same key", (t
   const explicit = base(t);
   assert.equal(init(explicit, { explicitLimit: 1 }).state.B, 1);
   assert.equal(reserve({ ...explicit, planSha256: "a".repeat(64), launchKey: "one" }).ok, true);
+  complete({ ...explicit, launchKey: "one", childReceiptId: "st_one" });
   assert.equal(
     reserve({ ...explicit, planSha256: "b".repeat(64), launchKey: "two" }).reason,
     "BUDGET_EXHAUSTED",
@@ -178,19 +200,47 @@ test("STOP_UNKNOWN survives a new init and blocks reservation", (t) => {
   assert.equal(reinit.state.status, "stop-unknown");
 });
 
-test("the same launch key is idempotent", (t) => {
+test("the same launch key is a replay, never permission to launch again", (t) => {
   const options = base(t);
   init(options, { explicitLimit: 2 });
   assert.equal(reserve({ ...options, planSha256: "a".repeat(64), launchKey: "same" }).ok, true);
   const second = reserve({ ...options, planSha256: "b".repeat(64), launchKey: "same" });
+  assert.equal(second.ok, false);
+  assert.equal(second.reason, "DUPLICATE_LAUNCH");
   assert.equal(second.duplicate, true);
   assert.equal(state(options).U, 1);
+});
+
+test("expected revision and unresolved reservation are checked before a new launch", (t) => {
+  const options = base(t);
+  const created = init(options, { explicitLimit: 2 });
+  const revision = created.state.revision;
+  const mismatch = reserve({
+    ...options,
+    planSha256: "a".repeat(64),
+    launchKey: "stale-view",
+    expectedRevision: revision + 1,
+  });
+  assert.equal(mismatch.reason, "REVISION_MISMATCH");
+  assert.equal(state(options).U, 0);
+
+  assert.equal(reserve({
+    ...options,
+    planSha256: "a".repeat(64),
+    launchKey: "reserved",
+    expectedRevision: revision,
+  }).ok, true);
+  assert.equal(
+    reserve({ ...options, planSha256: "a".repeat(64), launchKey: "second" }).reason,
+    "UNRESOLVED_LAUNCH",
+  );
 });
 
 test("manual reservation is one-shot and never changes B", (t) => {
   const options = base(t);
   init(options, { explicitLimit: 1 });
   assert.equal(reserve({ ...options, planSha256: "a".repeat(64), launchKey: "auto" }).ok, true);
+  complete({ ...options, launchKey: "auto", childReceiptId: "st_auto" });
   const manual = reserve({
     ...options,
     planSha256: "a".repeat(64),
@@ -202,6 +252,7 @@ test("manual reservation is one-shot and never changes B", (t) => {
   assert.equal(manual.state.B, 1);
   assert.equal(manual.state.U, 2);
   assert.equal(manual.state.manualUsed, 1);
+  complete({ ...options, launchKey: "manual", childReceiptId: "st_manual" });
   assert.equal(
     reserve({
       ...options,
@@ -228,10 +279,16 @@ test("complete binds one child receipt without refunding usage", (t) => {
   const options = base(t);
   init(options, { explicitLimit: 1 });
   assert.equal(reserve({ ...options, planSha256: "a".repeat(64), launchKey: "auto" }).ok, true);
+  const reserved = state(options);
+  assert.equal(
+    complete({ ...options, launchKey: "auto", childReceiptId: "st_01a20000", expectedRevision: reserved.revision + 1 }).reason,
+    "REVISION_MISMATCH",
+  );
   const done = complete({
     ...options,
     launchKey: "auto",
     childReceiptId: "st_01a20000",
+    expectedRevision: reserved.revision,
   });
   assert.equal(done.ok, true);
   assert.equal(done.state.childReceiptId, "st_01a20000");

@@ -25,11 +25,13 @@
 // Neither flag shows that an extension loads or behaves correctly in a new process.
 //
 // Usage:
-//   node custom-layer/check-patches.mjs [--only <name>] [--senpi-root <dir>] [--verbose] [--strict] [--json]
+//   node custom-layer/check-patches.mjs [--only <name>] [--senpi-root <dir>] [--verbose] [--strict] [--json] [--behavior] [--behavior-evidence <dir>]
 
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import os from "node:os";
+import { maintenanceFromReports } from "./plan-review-convergence/maintenance.mjs";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
@@ -676,6 +678,21 @@ function readLedger(rows) {
   return { path: LEDGER, ...compareLedger(parsed, rows) };
 }
 
+function runProbeReport(command, args, outPath) {
+  try {
+    execFileSync(command, args, {
+      encoding: "utf8",
+      timeout: 1800000,
+      maxBuffer: 8 * 1024 * 1024,
+      stdio: ["ignore", "ignore", "ignore"],
+    });
+  } catch (error) {
+    // A failing scenario still writes the report; the report is the evidence.
+    if (!fs.existsSync(outPath)) throw error;
+  }
+  return JSON.parse(fs.readFileSync(outPath, "utf8"));
+}
+
 function runJsonLine(command, args, prefix, timeout = 60000) {
   try {
     const out = execFileSync(command, args, {
@@ -735,16 +752,27 @@ export function makeRows() {
         `${HERE}/plan-review-convergence/patch.mjs`,
         `${HERE}/plan-review-convergence/probe.mjs`,
         `${HERE}/plan-review-convergence/maintenance.mjs`,
+        `${HERE}/plan-review-convergence/handoff.mjs`,
+        `${HERE}/plan-review-convergence/lead-submission.mjs`,
         `${HERE}/plan-review-convergence/boundary.md`,
         `${HERE}/plan-review-convergence/README.md`,
+        `${HERE}/plan-review-convergence/workflow-contract.md`,
+        `${HERE}/plan-review-convergence/test/helpers/host.mjs`,
+        `${HERE}/plan-review-convergence/test/helpers/write-guard.cjs`,
         `${HERE}/plan-review-convergence/test/maintenance.test.mjs`,
+        `${HERE}/plan-review-convergence/test/handoff.test.mjs`,
+        `${HERE}/plan-review-convergence/test/native.test.mjs`,
+        `${HERE}/plan-review-convergence/test/probe.test.mjs`,
       ],
       installed: [],
       unverified: [
         "Candidate only: not installed or activated; managed delta applied only to a fixture copy",
-        "Actual owner message and handoff consumption are BLOCKED_NO_BOUNDARY",
+        "The live installation remains outside the candidate; the isolated replay covers receipt, child read, resume, handoff, findings delivery and forged inputs",
       ],
       manual: ["Live installation and real host acceptance require separate authorization"],
+      behavior: {
+        probe: `${HERE}/plan-review-convergence/probe.mjs`,
+      },
     },
     {
       name: "plan-review-unlock",
@@ -1341,6 +1369,138 @@ function evaluateRow(row, opts) {
     }
   }
 
+  if (row.behavior) {
+    const pushVerdict = (verdict) => {
+      out.extras.push(`maintenance=${verdict.verdict}`);
+      out.installed.push({
+        status: verdict.verdict === "candidate-pass" ? "ok" : "drift",
+        label: "behavior:stock-vs-candidate",
+        actual: verdict.verdict,
+        expected: "candidate-pass",
+      });
+      if (opts.verbose) out.extras.push(`behavior=${JSON.stringify(verdict.inputs)}`);
+      if (verdict.verdict !== "candidate-pass") {
+        out.unverified.push(`maintenance verdict ${verdict.verdict}: ${JSON.stringify(verdict.inputs)}`);
+      }
+    };
+    if (!opts.behavior && !opts.behaviorEvidence) {
+      out.unverified.push("behavior parity not run: pass --behavior to replay stock and candidate in isolation, or --behavior-evidence <dir> for recorded real reports");
+    } else {
+      try {
+        let verdict;
+        if (opts.behaviorEvidence) {
+          const evidenceDir = opts.behaviorEvidence;
+          const stockName = ["case-stock-second-review.json", "case-all-stock.json", "case-boundary-stock-replay.json"]
+            .find((name) => fs.existsSync(path.join(evidenceDir, name)));
+          if (!stockName) throw new Error(`behavior evidence missing: stock report in ${evidenceDir}`);
+          const stockReport = JSON.parse(fs.readFileSync(path.join(evidenceDir, stockName), "utf8"));
+          const allPath = path.join(evidenceDir, "case-all.json");
+          let candidateReport;
+          if (fs.existsSync(allPath)) {
+            candidateReport = JSON.parse(fs.readFileSync(allPath, "utf8"));
+            const freshResume = path.join(evidenceDir, "case-native-resume.json");
+            if (fs.existsSync(freshResume)) {
+              const fresh = JSON.parse(fs.readFileSync(freshResume, "utf8"));
+              const index = candidateReport.scenarios.findIndex((scenario) => scenario.caseId === "native-resume");
+              if (index >= 0 && fresh.scenarios?.[0]) {
+                candidateReport.scenarios[index] = fresh.scenarios[0];
+                candidateReport.ok = candidateReport.scenarios.every((scenario) => scenario.state === scenario.expectedState);
+              }
+            }
+          } else {
+            const scenarios = [];
+            let boundaryDetail = null;
+            let ownerTranscript = null;
+            for (const name of fs.readdirSync(evidenceDir)
+              .filter((file) => /^case-.*\.json$/.test(file))
+              .filter((file) => !file.startsWith("case-stock-") && file !== "case-boundary-stock-replay.json")) {
+              const report = JSON.parse(fs.readFileSync(path.join(evidenceDir, name), "utf8"));
+              scenarios.push(...(report.scenarios || []));
+              boundaryDetail ??= report.boundaryDetail;
+              ownerTranscript ??= report.ownerTranscript;
+            }
+            candidateReport = {
+              schema: "plan-review-convergence/probe/v2",
+              variant: "candidate",
+              ok: scenarios.every((scenario) => scenario.state === scenario.expectedState),
+              boundary: boundaryDetail?.state,
+              boundaryDetail,
+              ownerTranscript,
+              scenarios,
+            };
+          }
+          verdict = maintenanceFromReports({
+            stockReport,
+            candidateReport,
+            boundary: candidateReport.boundaryDetail,
+          });
+        } else {
+          const dir = fs.mkdtempSync(path.join(os.tmpdir(), `check-patches-${row.name}-`));
+          try {
+            const stockOut = path.join(dir, "stock.json");
+            const stockReport = runProbeReport(process.execPath, [
+              row.behavior.probe,
+              "--variant", "stock",
+              "--case", "all",
+              "--out", stockOut,
+            ], stockOut);
+            const candidateCases = [
+              "native-single-review",
+              "native-batch-review",
+              "native-auto-progress",
+              "native-no-progress",
+              "native-resume",
+              "native-delegation-handoff",
+              "probe-forged-records",
+              "probe-forged-handoff",
+              "candidate-second-review",
+              "native-ledger-deleted",
+            ];
+            const scenarios = [];
+            let boundaryDetail = null;
+            let ownerTranscript = null;
+            for (const caseId of candidateCases) {
+              const candidateOut = path.join(dir, `candidate-${caseId}.json`);
+              const report = runProbeReport(process.execPath, [
+                row.behavior.probe,
+                "--variant", "candidate",
+                "--case", caseId,
+                "--out", candidateOut,
+              ], candidateOut);
+              scenarios.push(...report.scenarios);
+              boundaryDetail ??= report.boundaryDetail;
+              ownerTranscript ??= report.ownerTranscript;
+            }
+            const candidateReport = {
+              schema: "plan-review-convergence/probe/v2",
+              variant: "candidate",
+              ok: scenarios.every((scenario) => scenario.state === scenario.expectedState),
+              boundary: boundaryDetail?.state,
+              boundaryDetail,
+              ownerTranscript,
+              scenarios,
+            };
+            verdict = maintenanceFromReports({
+              stockReport,
+              candidateReport,
+              boundary: candidateReport.boundaryDetail,
+            });
+          } finally {
+            fs.rmSync(dir, { recursive: true, force: true });
+          }
+        }
+        pushVerdict(verdict);
+      } catch (error) {
+        out.installed.push({
+          status: "drift",
+          label: "behavior:stock-vs-candidate",
+          actual: error.message,
+          expected: "candidate-pass",
+        });
+      }
+    }
+  }
+
   return out;
 }
 
@@ -1358,7 +1518,7 @@ function summarizePatchCheck(check) {
 // CLI
 
 function parseArgs(argv) {
-  const opts = { only: null, verbose: false, strict: false, json: false, senpiRoot: SENPI, agentDir: AGENT };
+  const opts = { only: null, verbose: false, strict: false, json: false, behavior: false, behaviorEvidence: null, senpiRoot: SENPI, agentDir: AGENT };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--only") opts.only = argv[++i];
@@ -1366,6 +1526,8 @@ function parseArgs(argv) {
     else if (arg === "--senpi-root") opts.senpiRoot = argv[++i];
     else if (arg === "--strict") opts.strict = true;
     else if (arg === "--json") opts.json = true;
+    else if (arg === "--behavior") opts.behavior = true;
+    else if (arg === "--behavior-evidence") opts.behaviorEvidence = argv[++i];
     else if (arg === "--help" || arg === "-h") opts.help = true;
     else throw new Error(`unknown argument: ${arg}`);
   }
@@ -1383,7 +1545,7 @@ export function main(argv = process.argv.slice(2)) {
 
   if (opts.help) {
     console.log(
-      "usage: node custom-layer/check-patches.mjs [--only <name>] [--senpi-root <dir>] [--verbose] [--strict] [--json]",
+      "usage: node custom-layer/check-patches.mjs [--only <name>] [--senpi-root <dir>] [--verbose] [--strict] [--json] [--behavior] [--behavior-evidence <dir>]",
     );
     return 0;
   }

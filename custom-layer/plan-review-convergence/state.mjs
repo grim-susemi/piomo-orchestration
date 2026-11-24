@@ -118,12 +118,51 @@ function writeRevision(root, key, state) {
   return state;
 }
 
-export function initialize({ root, workspaceId, workspaceRoot, planPath, cwd, planSha256, explicitLimit, draftLimit }) {
+export function initialize({
+  root,
+  workspaceId,
+  workspaceRoot,
+  planPath,
+  cwd,
+  planSha256,
+  explicitLimit,
+  draftLimit,
+  firstRequest,
+  anchorRoot = null,
+}) {
   const { key } = logicalKey({ workspaceId, workspaceRoot, planPath, cwd });
   const budget = resolveBudget(explicitLimit);
+  const anchorPath = anchorRoot
+    ? join(anchorRoot, `${createHash("sha256").update(key).digest("hex").slice(0, 16)}.json`)
+    : null;
+  const readAnchor = () => {
+    if (!anchorPath) return null;
+    try {
+      return JSON.parse(readFileSync(anchorPath, "utf8"));
+    } catch {
+      return null;
+    }
+  };
   return withLock(root, key, () => {
     const existing = readState(root, key);
     if (existing) return { ok: true, state: existing, created: false };
+    const anchor = readAnchor();
+    if (anchor) {
+      // The workspace anchor survives a deleted state root.  A missing ledger
+      // with a live anchor is deletion, not a first run; never grant a fresh
+      // budget from it.
+      return { ok: false, reason: "LEDGER_DELETED", anchor };
+    }
+    // A ledger may only be created from an observed host spawn: the caller must
+    // present the request bytes it saw (role, plan path, digest, parent session).
+    // A deleted ledger can then only be replaced by another real request, never
+    // by an agent restart that fabricates a fresh budget.
+    if (!firstRequest || typeof firstRequest.eventId !== "string" || firstRequest.eventId.length === 0) {
+      return { ok: false, reason: "FIRST_REQUEST_REQUIRED" };
+    }
+    if (typeof firstRequest.promptSha256 !== "string" || !/^[0-9a-f]{64}$/u.test(firstRequest.promptSha256)) {
+      return { ok: false, reason: "FIRST_REQUEST_INVALID" };
+    }
     const state = {
       schema: SCHEMA,
       W: key,
@@ -139,11 +178,37 @@ export function initialize({ root, workspaceId, workspaceRoot, planPath, cwd, pl
       launchKey: null,
       childReceiptId: null,
       usedOwnerEventIds: [],
+      firstRequestEventId: firstRequest.eventId,
+      firstRequestPromptSha256: firstRequest.promptSha256,
+      firstRequestSource: firstRequest.source ?? null,
+      firstRequestLimit: firstRequest.limit?.explicit ?? null,
+      firstRequestLimitSource: firstRequest.limit?.source ?? "default",
+      firstRequestLimitToken: firstRequest.limit?.values?.[0]?.token ?? null,
+      firstRequestSessionFile: firstRequest.sessionFile ?? null,
+      reservedAt: null,
+      stoppedAt: null,
+      reviewedBodySha256: null,
+      reviewedSnapshotRef: null,
     };
     // A draft's review_round_limit is deliberately ignored; only the
     // host-verified explicit 1-5 request limit can lower B.
     void draftLimit;
     writeRevision(root, key, state);
+    if (anchorPath) {
+      mkdirSync(anchorRoot, { recursive: true });
+      try {
+        writeFileSync(anchorPath, `${JSON.stringify({
+          schema: "plan-review-convergence/ledger-anchor/v1",
+          W: key,
+          createdAt: new Date().toISOString(),
+          firstRequestEventId: firstRequest.eventId,
+          firstRequestPromptSha256: firstRequest.promptSha256,
+          firstRequestSource: firstRequest.source ?? null,
+        })}\n`, { flag: "wx" });
+      } catch (error) {
+        if (error.code !== "EEXIST") throw error;
+      }
+    }
     return { ok: true, state, created: true };
   });
 }
@@ -160,6 +225,9 @@ export function reserve({
   kind = "auto",
   ownerEventId,
   allowStopped = false,
+  expectedRevision,
+  reviewedBodySha256,
+  reviewedSnapshotRef,
   beforeWrite,
   afterWrite,
 }) {
@@ -168,9 +236,19 @@ export function reserve({
   return withLock(root, key, () => {
     const history = readAll(root, key);
     if (history.length === 0) return { ok: false, reason: "NO_STATE" };
-    const existing = history.find((state) => state.launchKey === launchKey);
-    if (existing) return { ok: true, state: existing, duplicate: true };
     const state = history[history.length - 1];
+    if (Number.isInteger(expectedRevision) && state.revision !== expectedRevision) {
+      return { ok: false, reason: "REVISION_MISMATCH", state };
+    }
+    const existing = history.find((entry) => entry.launchKey === launchKey);
+    if (existing) {
+      // The same run key is a replay, not permission to launch again.  The old
+      // `ok:true` made a duplicate notification look like a fresh allowance.
+      return { ok: false, reason: "DUPLICATE_LAUNCH", state: existing, duplicate: true };
+    }
+    if (state.status === "reserved" && !state.childReceiptId) {
+      return { ok: false, reason: "UNRESOLVED_LAUNCH", state };
+    }
     if (state.status === "stop-unknown") {
       return { ok: false, reason: "STATE_STOPPED" };
     }
@@ -194,10 +272,14 @@ export function reserve({
       autoUsed: state.autoUsed + (kind === "auto" ? 1 : 0),
       manualUsed: state.manualUsed + (kind === "manual" ? 1 : 0),
       status: "reserved",
+      lastKind: kind,
       roundNo: roundNo ?? state.roundNo,
       planSha256: planSha256 ?? state.planSha256,
       launchKey,
       childReceiptId: null,
+      reservedAt: new Date().toISOString(),
+      reviewedBodySha256: reviewedBodySha256 ?? state.reviewedBodySha256 ?? null,
+      reviewedSnapshotRef: reviewedSnapshotRef ?? state.reviewedSnapshotRef ?? null,
       usedOwnerEventIds: kind === "manual"
         ? [...state.usedOwnerEventIds, ownerEventId]
         : state.usedOwnerEventIds,
@@ -208,8 +290,7 @@ export function reserve({
   });
 }
 
-export function complete({ root, workspaceId, workspaceRoot, planPath, cwd, launchKey, childReceiptId }) {
-  const { key } = logicalKey({ workspaceId, workspaceRoot, planPath, cwd });
+export function completeByKey({ root, key, launchKey, childReceiptId, expectedRevision }) {
   if (typeof launchKey !== "string" || launchKey.length === 0) throw new Error("LAUNCH_KEY_REQUIRED");
   if (typeof childReceiptId !== "string" || childReceiptId.length === 0) {
     throw new Error("CHILD_RECEIPT_REQUIRED");
@@ -223,6 +304,12 @@ export function complete({ root, workspaceId, workspaceRoot, planPath, cwd, laun
       return { ok: true, state: completed, duplicate: true };
     }
     const state = history[history.length - 1];
+    if (Number.isInteger(expectedRevision) && state.revision !== expectedRevision) {
+      return { ok: false, reason: "REVISION_MISMATCH", state };
+    }
+    if (state.launchKey !== launchKey) {
+      return { ok: false, reason: "UNKNOWN_LAUNCH", state };
+    }
     const next = {
       ...state,
       revision: state.revision + 1,
@@ -234,16 +321,25 @@ export function complete({ root, workspaceId, workspaceRoot, planPath, cwd, laun
   });
 }
 
-export function markStop({ root, workspaceId, workspaceRoot, planPath, cwd, reason }) {
+export function complete({ root, workspaceId, workspaceRoot, planPath, cwd, launchKey, childReceiptId, expectedRevision }) {
+  const { key } = logicalKey({ workspaceId, workspaceRoot, planPath, cwd });
+  return completeByKey({ root, key, launchKey, childReceiptId, expectedRevision });
+}
+
+export function markStop({ root, workspaceId, workspaceRoot, planPath, cwd, reason, expectedRevision }) {
   const { key } = logicalKey({ workspaceId, workspaceRoot, planPath, cwd });
   return withLock(root, key, () => {
     const state = readState(root, key);
     if (!state) return { ok: false, reason: "NO_STATE" };
+    if (Number.isInteger(expectedRevision) && state.revision !== expectedRevision) {
+      return { ok: false, reason: "REVISION_MISMATCH", state };
+    }
     const next = {
       ...state,
       revision: state.revision + 1,
       status: reason === "STOP_UNKNOWN" ? "stop-unknown" : "stopped",
       stopReason: reason,
+      stoppedAt: new Date().toISOString(),
     };
     writeRevision(root, key, next);
     return { ok: true, state: next };

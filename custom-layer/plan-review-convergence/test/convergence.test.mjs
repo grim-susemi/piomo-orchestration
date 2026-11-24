@@ -1,33 +1,26 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { ConvergenceLedger, contradictionPresent, sha256Bytes } from "../convergence.mjs";
+import {
+  ConvergenceLedger,
+  findingKeys,
+  nextRoundProgress,
+  sha256Bytes,
+} from "../convergence.mjs";
 
-const H = "C:/Users/USER/orca/projects/기타 작업";
-const SESSION = H + "/.omo/senpi-task/children/st_01a203eb/sessions/st_01a203eb/2026-11-22T15-41-55-325Z_01a203eb-cefd-7e94-b497-ba10b6ecf823.jsonl";
-const TASK = H + "/.omo/senpi-task/tasks/st_01a203eb.json";
-const R83_SHA = "ab92ce5d927336a74dfdddd4c404db8e08ae7f378fcf0dd59e07245fe02ec5d1";
-const R83_RESPONSE_SHA = "d7dc7e845742424ac7c0908fc67ec315f5e039252e23290728eec577682d5a62";
-
-function buildSnapshot() {
-  const records = readFileSync(SESSION, "utf8").split(/\r?\n/u);
-  const picks = [[12, 207], [20, 107], [21, 81], [29, 15], [22, 47], [27, 38], [23, 80], [28, 5], [24, 72]];
-  const parts = picks.map(([line, count]) => {
-    const record = JSON.parse(records[line - 1]);
-    const text = record.message.content
-      .filter((item) => item.type === "text")
-      .map((item) => item.text)
-      .join("\n");
-    return text.split("\n").slice(0, count).join("\n");
-  });
-  const text = parts.join("\n");
-  return { text, sha256: sha256Bytes(Buffer.from(text, "utf8")) };
-}
-
-const snapshot = buildSnapshot();
-const actual = JSON.parse(readFileSync(TASK, "utf8"));
-const raw = actual.final_response;
-const lines = snapshot.text.split("\n");
+// Unit fixtures for the classifier.  The host-path progress evidence (real
+// reviewer receipts and real findings) is produced by probe.mjs; these strings
+// only exercise the pure classification/key rules.
+const RAW = "**[REJECT]**\n\nIS-1 contradicts the gateway start order at line 3 and line 5.\n";
+const SNAPSHOT_TEXT = [
+  "# Plan",
+  "",
+  "The gateway may allow client starts while the operator is signed in.", // 3
+  "",
+  "The launcher must deny client starts until the operator approves.", // 5
+  "Task 4 restates the open rule.",
+].join("\n");
+const snapshot = { text: SNAPSHOT_TEXT, sha256: sha256Bytes(Buffer.from(SNAPSHOT_TEXT, "utf8")) };
+const lines = SNAPSHOT_TEXT.split("\n");
 
 function ref(line) {
   return {
@@ -37,8 +30,8 @@ function ref(line) {
   };
 }
 
-const start = Buffer.byteLength(raw.slice(0, raw.indexOf("IS-4")), "utf8");
-const end = Buffer.byteLength(raw.slice(0, raw.indexOf("Choose one boundary")), "utf8");
+const start = Buffer.byteLength(RAW.slice(0, RAW.indexOf("IS-1")), "utf8");
+const end = Buffer.byteLength(RAW.slice(0, RAW.indexOf("line 5") + "line 5".length), "utf8");
 const witness = {
   kind: "contradiction",
   subject: "gateway-client",
@@ -46,63 +39,58 @@ const witness = {
   state: "descriptor-restoration",
   expectedA: "allow",
   expectedB: "deny",
-  lineA: 544,
-  lineB: 563,
-  lineC: 567,
-  tokensA: ["allow DB data access", "maintenance SID"],
-  tokensB: ["prevent background Gateway starts", "client admissions"],
+  lineA: 3,
+  lineB: 5,
+  tokensA: ["may allow client starts"],
+  tokensB: ["must deny client starts"],
 };
 const finding = {
-  receiptRef: actual.task_id,
+  receiptRef: "st_unit",
   responseSpan: [start, end],
-  spanTokens: ["IS-4", "line 544", ":563", "line 567"],
-  requirementId: "IS-4",
+  spanTokens: ["IS-1", "line 3", "line 5"],
+  requirementId: "IS-1",
   predicateId: "gateway-access-order",
   boundaryId: "gateway",
   failureClass: "contradiction",
-  evidenceRefs: [ref(544), ref(563), ref(567)],
+  evidenceRefs: [ref(3), ref(5)],
   witness,
 };
 const receipt = {
-  id: "r83",
+  id: "r90",
   W: "upgrade",
-  roundId: "r83",
-  taskId: actual.task_id,
-  childSessionId: actual.child_session_id,
-  planSha256: R83_SHA,
-  responseSha256: R83_RESPONSE_SHA,
-  rawResponseUtf8: raw,
+  roundId: "r90",
+  taskId: "st_unit",
+  childSessionId: "child-unit",
+  planSha256: snapshot.sha256,
+  reviewedBodySha256: snapshot.sha256,
+  responseSha256: sha256Bytes(Buffer.from(RAW, "utf8")),
+  rawResponseUtf8: RAW,
+  verdict: "REJECT",
+  status: "CHANGES_REQUESTED",
+  findings: [finding],
 };
 
-test("the r83 snapshot and response reconstruct to the recorded hashes", () => {
-  assert.equal(snapshot.sha256, R83_SHA);
-  assert.equal(sha256Bytes(Buffer.from(raw, "utf8")), R83_RESPONSE_SHA);
-  assert.equal(lines.length, 652);
-  assert.equal(contradictionPresent(snapshot, witness), true);
-});
-
-test("progress-revised-sha: the actual finding becomes one blocker key", () => {
-  const ledger = new ConvergenceLedger({ W: "upgrade", planSha256: R83_SHA });
+test("the classifier creates one cause key from the reviewer's structured fields", () => {
+  const ledger = new ConvergenceLedger({ W: "upgrade", planSha256: snapshot.sha256 });
   const round = ledger.startRound({ receipt, snapshot, findings: [finding] });
   assert.equal(round.status, "changes_requested");
   assert.equal(round.findings.length, 1);
   assert.equal(round.findings[0].classification, "actual-blocker");
   assert.equal(round.findings[0].display, "실제 차단");
-  assert.equal(round.findings[0].causeKey, "IS-4|gateway-access-order|gateway|contradiction");
+  assert.equal(round.findings[0].causeKey, "IS-1|gateway-access-order|gateway|contradiction");
   assert.equal(round.openKeys.length, 1);
-  assert.equal(round.autoProgress, 0);
-  assert.ok(ledger.reject);
+  assert.deepEqual(findingKeys([finding]), ["IS-1|gateway-access-order|gateway|contradiction"]);
 });
 
-test("progress-duplicate-scope: duplicates, other plans, out-of-scope, and forged citations do not add keys", () => {
-  const ledger = new ConvergenceLedger({ W: "upgrade", planSha256: R83_SHA });
+test("duplicates, other plans, out-of-scope, and forged citations do not add keys", () => {
+  const ledger = new ConvergenceLedger({ W: "upgrade", planSha256: snapshot.sha256 });
   const round = ledger.startRound({ receipt, snapshot, findings: [finding] });
   const causeKey = round.findings[0].causeKey;
 
   const duplicate = ledger.addRound({
     receipt,
     snapshot,
-    findings: [{ ...finding, responseSpan: [start, end - 1] }],
+    findings: [{ ...finding, responseSpan: [0, Buffer.byteLength(RAW, "utf8")], spanTokens: ["IS-1"] }],
   });
   assert.equal(duplicate.findings[0].classification, "duplicate");
   assert.equal(duplicate.findings[0].duplicateOf, causeKey);
@@ -125,7 +113,7 @@ test("progress-duplicate-scope: duplicates, other plans, out-of-scope, and forge
   const forged = ledger.addRound({
     receipt,
     snapshot,
-    findings: [{ ...finding, evidenceRefs: [{ ...ref(544), sha256: "0".repeat(64) }] }],
+    findings: [{ ...finding, evidenceRefs: [{ ...ref(3), sha256: "0".repeat(64) }] }],
   });
   assert.equal(forged.findings[0].classification, "evidence-unconfirmed");
 
@@ -139,7 +127,7 @@ test("progress-duplicate-scope: duplicates, other plans, out-of-scope, and forge
 });
 
 test("a new key after the baseline needs an explicit regression reason", () => {
-  const ledger = new ConvergenceLedger({ W: "upgrade", planSha256: R83_SHA });
+  const ledger = new ConvergenceLedger({ W: "upgrade", planSha256: snapshot.sha256 });
   ledger.startRound({ receipt, snapshot, findings: [finding] });
   const newKey = { ...finding, predicateId: "resume-order" };
   const denied = ledger.addRound({ receipt, snapshot, findings: [newKey] });
@@ -153,87 +141,53 @@ test("a new key after the baseline needs an explicit regression reason", () => {
   assert.equal(allowed.openKeys.length, 2);
 });
 
-test("resolve requires the same witness to fail before and pass after a new SHA", () => {
-  const ledger = new ConvergenceLedger({ W: "upgrade", planSha256: R83_SHA });
-  const round = ledger.startRound({ receipt, snapshot, findings: [finding] });
-  const causeKey = round.findings[0].causeKey;
-
-  const revisedLines = [...lines];
-  revisedLines[543] = revisedLines[543].replace("allow DB data access", "block DB data access");
-  const revisedText = revisedLines.join("\n");
-  const revisedSnapshot = { text: revisedText, sha256: sha256Bytes(Buffer.from(revisedText, "utf8")) };
-  assert.equal(contradictionPresent(revisedSnapshot, witness), false);
-
-  const resolved = ledger.resolve({
-    causeKey,
-    witness,
-    revisedSnapshot,
-    revisedSha: revisedSnapshot.sha256,
+test("recordRound keeps a persisted cause key across rounds", () => {
+  const ledger = new ConvergenceLedger({ W: "upgrade", planSha256: snapshot.sha256 });
+  const first = ledger.recordRound({ receipt, snapshot, findings: [finding] });
+  const causeKey = first.findings[0].causeKey;
+  const restored = ConvergenceLedger.fromJSON(JSON.parse(JSON.stringify(ledger.toJSON())));
+  assert.ok(restored);
+  const nextReceipt = { ...receipt, taskId: "st_round2", roundId: "r91" };
+  const second = restored.recordRound({
+    receipt: nextReceipt,
+    snapshot,
+    findings: [{ ...finding, receiptRef: "st_round2" }],
   });
-  assert.equal(resolved.ok, true);
-  assert.equal(ledger.closed.size, 1);
-  assert.equal(ledger.autoEligibility({
-    newSha: revisedSnapshot.sha256,
-    previousSha: R83_SHA,
-    budgetRemaining: 1,
-    stopped: false,
-    goalOk: true,
-    scopeOk: true,
-    hasProgress: true,
-  }).allow, true);
-
-  const again = ledger.addRound({ receipt, snapshot, findings: [finding] });
-  assert.equal(again.findings[0].classification, "duplicate");
-
-  const hashOnly = { ...snapshot, text: `${snapshot.text}\n<!-- hash-only change -->` };
-  hashOnly.sha256 = sha256Bytes(Buffer.from(hashOnly.text, "utf8"));
-  const unresolved = new ConvergenceLedger({ W: "upgrade", planSha256: R83_SHA });
-  const unresolvedRound = unresolved.startRound({ receipt, snapshot, findings: [finding] });
-  const hashOnlyResult = unresolved.resolve({
-    causeKey: unresolvedRound.findings[0].causeKey,
-    witness,
-    revisedSnapshot: hashOnly,
-    revisedSha: hashOnly.sha256,
-  });
-  assert.equal(hashOnlyResult.ok, false);
-  assert.equal(hashOnlyResult.reason, "STILL_PRESENT");
+  assert.equal(second.findings[0].classification, "duplicate");
+  assert.equal(second.findings[0].duplicateOf, causeKey);
+  assert.equal(restored.rounds.length, 2);
 });
 
-test("autoEligibility stops on no progress, same SHA, budget, stop, and scope drift", () => {
-  const ledger = new ConvergenceLedger({ W: "upgrade", planSha256: R83_SHA });
-  assert.equal(ledger.autoEligibility({
-    newSha: "new",
-    previousSha: R83_SHA,
-    budgetRemaining: 1,
-    stopped: false,
-    goalOk: true,
-    scopeOk: true,
-    hasProgress: false,
-  }).reason, "STOP_NO_PROGRESS");
+test("next-round progress rejects a recurring blocker key", () => {
+  const next = { ...receipt, taskId: "st_round2", roundId: "r91" };
+  const result = nextRoundProgress({ reserved: receipt, next, W: "upgrade" });
+  assert.equal(result.allow, false);
+  assert.equal(result.reason, "SAME_BLOCKER");
+  assert.deepEqual(result.sameKeys, ["IS-1|gateway-access-order|gateway|contradiction"]);
+});
 
-  const resolved = new ConvergenceLedger({ W: "upgrade", planSha256: R83_SHA });
-  resolved.startRound({ receipt, snapshot, findings: [finding] });
-  const revisedLines = [...lines];
-  revisedLines[543] = revisedLines[543].replace("allow DB data access", "block DB data access");
-  const revisedText = revisedLines.join("\n");
-  const revisedSnapshot = { text: revisedText, sha256: sha256Bytes(Buffer.from(revisedText, "utf8")) };
-  resolved.resolve({
-    causeKey: [...resolved.open.keys()][0],
-    witness,
-    revisedSnapshot,
-    revisedSha: revisedSnapshot.sha256,
-  });
-  const base = {
-    newSha: revisedSnapshot.sha256,
-    previousSha: R83_SHA,
-    budgetRemaining: 1,
-    stopped: false,
-    goalOk: true,
-    scopeOk: true,
-    hasProgress: true,
+test("next-round progress allows a different blocker key", () => {
+  const next = {
+    ...receipt,
+    taskId: "st_round2",
+    roundId: "r91",
+    findings: [{ ...finding, receiptRef: "st_round2", predicateId: "resume-order" }],
   };
-  assert.equal(resolved.autoEligibility({ ...base, newSha: R83_SHA }).reason, "STOP_NO_NEW_SHA");
-  assert.equal(resolved.autoEligibility({ ...base, budgetRemaining: 0 }).reason, "STOP_BUDGET");
-  assert.equal(resolved.autoEligibility({ ...base, stopped: true }).reason, "STOPPED");
-  assert.equal(resolved.autoEligibility({ ...base, scopeOk: false }).reason, "STOP_SCOPE");
+  const result = nextRoundProgress({ reserved: receipt, next, W: "upgrade" });
+  assert.equal(result.allow, true);
+  assert.equal(result.reason, "NEW_BLOCKER_KEYS");
+  assert.deepEqual(result.nextKeys, ["IS-1|resume-order|gateway|contradiction"]);
+});
+
+test("next-round progress allows an APPROVED next result", () => {
+  const next = { status: "APPROVED", verdict: "OKAY", W: "upgrade", findings: [] };
+  const result = nextRoundProgress({ reserved: receipt, next, W: "upgrade" });
+  assert.equal(result.allow, true);
+  assert.equal(result.reason, "APPROVED");
+});
+
+test("next-round progress rejects a missing review result", () => {
+  const result = nextRoundProgress({ reserved: receipt, next: null, W: "upgrade" });
+  assert.equal(result.allow, false);
+  assert.equal(result.reason, "NO_REVIEW_RESULT");
 });

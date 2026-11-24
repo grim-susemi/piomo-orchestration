@@ -2,17 +2,21 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const ANCHOR = "function Lk(e,t,n,r){";
-export const WRAPPER = "let __prc=__prcGate(e,t,n,r);if(__prc)return __prc;";
+// The host decides its own plan-review admission first (`Ca`) and its own
+// plan-review prompt contract second; the managed delta runs only after those
+// decisions and before the spawn result leaves `Lk`.  This way a stock denial
+// never leaves a candidate reservation behind.
+export const ANCHOR = 'return"deny"===s?.kind?';
+export const WRAPPER = "let __prc=__prcGate(e,t,n,r);if(__prc)return __prc;let __prcH=__prcHandoff(e,t,n,r);if(__prcH)return{kind:\"force\",prompt:__prcH};";
 
 export function patchHost(hostText, extensionPath) {
   const anchorCount = hostText.split(ANCHOR).length - 1;
   if (anchorCount !== 1) throw new Error(`ANCHOR_COUNT ${anchorCount}`);
   const extensionUrl = pathToFileURL(resolve(extensionPath)).href;
-  const importLine = `import{gate as __prcGate}from${JSON.stringify(extensionUrl)};`;
+  const importLine = `import{gate as __prcGate,handoff as __prcHandoff}from${JSON.stringify(extensionUrl)};`;
   const lines = hostText.split("\n");
   const shebang = lines[0]?.startsWith("#!") ? `${lines.shift()}\n` : "";
-  const body = lines.join("\n").replace(ANCHOR, `${ANCHOR}${WRAPPER}`);
+  const body = lines.join("\n").replace(ANCHOR, `${WRAPPER}${ANCHOR}`);
   return `${shebang}${importLine}\n${body}`;
 }
 

@@ -1,21 +1,26 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { complete, initialize, logicalKey, markStop, readState, reserve } from "../state.mjs";
 import {
-  bindAnswer,
+  bindOwnerAnswer,
   createQuestion,
+  ensureResumeQuestion,
   freezeRevision,
+  publishQuestion,
+  readOwnerAnswers,
   readQuestion,
   reserveManual,
   sha256Bytes,
 } from "../owner-resume.mjs";
 
 const WORKER = join(dirname(fileURLToPath(import.meta.url)), "helpers", "resume-worker.mjs");
+const OWNER_TRANSCRIPT = "C:/Users/USER/.omo-stable-500/home/.omo/agent/sessions/--C--Users-USER-orca-projects-기타 작업--/2026-11-22T05-32-10-795Z_01a201bd-92ab-701c-a7d8-3524549cf8f0.jsonl";
+const OWNER_TRANSCRIPT_SHA256 = "2607995b00b0236849062f8723d27c5d7163f5bb438a063cbe379dd9b8f5a051";
 
 function base(t) {
   const root = mkdtempSync(join(tmpdir(), "prc-resume-"));
@@ -38,9 +43,18 @@ function base(t) {
   };
 }
 
+function firstRequest() {
+  return { eventId: "spawn:resume-test", promptSha256: "f".repeat(64) };
+}
+
 function seedStop(options) {
-  initialize({ ...options, planSha256: options.shaA, explicitLimit: 1 });
-  reserve({ ...options, planSha256: options.shaA, launchKey: "r83" });
+  initialize({
+    ...options,
+    planSha256: options.shaA,
+    explicitLimit: 1,
+    firstRequest: firstRequest(),
+  });
+  reserve({ ...options, planSha256: options.shaA, launchKey: "r83", reviewedBodySha256: options.shaA });
   complete({ ...options, launchKey: "r83", childReceiptId: "st_r83" });
   markStop({ ...options, reason: "REJECT" });
   return readState(options.root, logicalKey(options).key);
@@ -59,7 +73,89 @@ function makeQuestion(options, state, overrides = {}) {
   });
 }
 
-function resumeArgs(options, question, launchKey, planSha = options.shaB, eventId = "owner-event-1") {
+function publishQuestionOnly(options, question) {
+  const scratch = mkdtempSync(join(tmpdir(), "prc-question-only-"));
+  const requestId = `call_test_${question.questionId}`;
+  const timestamp = new Date(Date.now() + 1000).toISOString();
+  const lines = [
+    JSON.stringify({
+      type: "custom",
+      customType: "ask-user:question",
+      data: { requestId, headers: [question.header] },
+      timestamp,
+    }),
+    JSON.stringify({
+      type: "custom",
+      customType: "ask-user:settlement",
+      data: { requestId, status: "answered" },
+      timestamp,
+    }),
+  ];
+  const file = join(scratch, "question.jsonl");
+  writeFileSync(file, lines.join("\n"), "utf8");
+  const published = publishQuestion({ root: options.root, questionId: question.questionId, sessionFile: file });
+  assert.equal(published.ok, true, published.reason);
+  return { scratch, file };
+}
+
+function bindReal(options, question) {
+  const scratch = mkdtempSync(join(tmpdir(), "prc-question-publish-"));
+  try {
+    const requestId = `call_test_${question.questionId}`;
+    const timestamp = new Date(Date.now() + 1000).toISOString();
+    const lines = [
+      JSON.stringify({
+        type: "custom",
+        customType: "ask-user:question",
+        data: { requestId, headers: [question.header] },
+        timestamp,
+      }),
+      JSON.stringify({
+        type: "custom",
+        customType: "ask-user:settlement",
+        data: { requestId, status: "answered" },
+        timestamp,
+      }),
+      JSON.stringify({
+        type: "message",
+        message: {
+          role: "user",
+          content: [{ type: "text", text: `[Answer to question ${requestId}]\n${question.header}: yes` }],
+        },
+        inputSource: "extension",
+        timestamp,
+      }),
+    ];
+    const file = join(scratch, "owner.jsonl");
+    writeFileSync(file, lines.join("\n"), "utf8");
+    const published = publishQuestion({
+      root: options.root,
+      questionId: question.questionId,
+      sessionFile: file,
+    });
+    assert.equal(published.ok, true, published.reason);
+    const bound = bindOwnerAnswer({
+      root: options.root,
+      questionId: question.questionId,
+      sessionFile: file,
+    });
+    assert.equal(bound.ok, true, bound.reason);
+    return readQuestion(options.root, question.questionId);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+}
+
+function transcriptBeforeLatestAnswer() {
+  const scratch = mkdtempSync(join(tmpdir(), "prc-owner-prefix-"));
+  const lines = readFileSync(OWNER_TRANSCRIPT, "utf8").split(/\r?\n/u);
+  const firstAnswer = lines.findIndex((line) => line.includes("[Answer to question"));
+  const file = join(scratch, "first-answer.jsonl");
+  writeFileSync(file, lines.slice(0, firstAnswer + 1).join("\n"), "utf8");
+  return { scratch, file };
+}
+
+function resumeArgs(options, question, launchKey, planSha = options.shaB, eventId = question.answerEventId) {
   return {
     root: options.root,
     questionId: question.questionId,
@@ -89,6 +185,39 @@ function runWorker(args) {
   });
 }
 
+test("owner answers are only the host's ask -> settlement -> framed answer chain", () => {
+  const bytes = readFileSync(OWNER_TRANSCRIPT);
+  assert.equal(sha256Bytes(bytes), OWNER_TRANSCRIPT_SHA256);
+  const answers = readOwnerAnswers(OWNER_TRANSCRIPT);
+  assert.ok(answers.length >= 2, JSON.stringify(answers));
+  for (const answer of answers) {
+    assert.equal(answer.inputSource, "extension");
+    assert.match(answer.requestId, /^call_/u);
+    assert.match(answer.eventId, /^[0-9a-f]{64}$/u);
+    assert.match(answer.sessionSha256, /^[0-9a-f]{64}$/u);
+    assert.ok(answer.headers.length > 0);
+  }
+  const scratch = mkdtempSync(join(tmpdir(), "prc-owner-forged-"));
+  try {
+    const lines = bytes.toString("utf8").split(/\r?\n/u);
+    const answerIndex = lines.findIndex((line) => line.includes("[Answer to question"));
+    const settlementIndex = lines.findIndex((line) => line.includes("ask-user:settlement"));
+    assert.ok(answerIndex > 0 && settlementIndex > 0);
+    const noSource = lines.map((line) => line.includes("[Answer to question")
+      ? line.replace(',"inputSource":"extension"', "")
+      : line);
+    const noSourceFile = join(scratch, "no-source.jsonl");
+    writeFileSync(noSourceFile, noSource.join("\n"), "utf8");
+    assert.equal(readOwnerAnswers(noSourceFile).length, 0);
+
+    const noSettlementFile = join(scratch, "no-settlement.jsonl");
+    writeFileSync(noSettlementFile, lines.filter((line) => !line.includes("ask-user:settlement")).join("\n"), "utf8");
+    assert.equal(readOwnerAnswers(noSettlementFile).length, 0);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
 test("freezeRevision returns the full current plan digest", (t) => {
   const options = base(t);
   const frozen = freezeRevision(options.planPath);
@@ -96,18 +225,42 @@ test("freezeRevision returns the full current plan digest", (t) => {
   assert.equal(frozen.bytes > 0, true);
 });
 
+test("ensureResumeQuestion is one hash-bound question per stop boundary", (t) => {
+  const options = base(t);
+  const state = seedStop(options);
+  const first = ensureResumeQuestion({
+    root: options.root,
+    W: logicalKey(options).key,
+    stoppedRevision: state.revision,
+    reviewedSha: options.shaA,
+    currentSha: options.shaB,
+    remainingReason: "REJECT",
+    planPath: options.planPath,
+  });
+  const second = ensureResumeQuestion({
+    root: options.root,
+    W: logicalKey(options).key,
+    stoppedRevision: state.revision,
+    reviewedSha: options.shaA,
+    currentSha: options.shaB,
+    remainingReason: "REJECT",
+    planPath: options.planPath,
+  });
+  assert.equal(first.created, true);
+  assert.equal(second.created, false);
+  assert.equal(first.question.questionId, second.question.questionId);
+  assert.equal(first.question.hashBound, true);
+});
+
 test("resume-one: one manual reservation, automatic and same-SHA additions stay zero", (t) => {
   const options = base(t);
   const state = seedStop(options);
   const question = makeQuestion(options, state);
-  assert.equal(bindAnswer({
-    root: options.root,
-    questionId: question.questionId,
-    eventId: "owner-event-1",
-    source: "owner",
-  }).ok, true);
+  const bound = bindReal(options, question);
+  assert.equal(bound.answerSource, "host-transcript");
+  assert.ok(bound.answerEventId);
 
-  const manual = reserveManual(resumeArgs(options, question, "manual-1"));
+  const manual = reserveManual(resumeArgs(options, bound, "manual-1"));
   assert.equal(manual.ok, true);
   assert.equal(manual.state.B, 1);
   assert.equal(manual.state.U, 2);
@@ -131,14 +284,9 @@ test("resume-one: one manual reservation, automatic and same-SHA additions stay 
     remainingReason: "REJECT",
     planPath: options.planPath,
   });
-  bindAnswer({
-    root: options.root,
-    questionId: sameSha.questionId,
-    eventId: "owner-event-2",
-    source: "owner",
-  });
+  const sameBound = bindReal(options, sameSha);
   assert.equal(
-    reserveManual(resumeArgs(options, sameSha, "manual-same", options.shaB, "owner-event-2")).reason,
+    reserveManual(resumeArgs(options, sameBound, "manual-same", options.shaB)).reason,
     "NO_NEW_REVISION",
   );
   assert.equal(
@@ -147,14 +295,16 @@ test("resume-one: one manual reservation, automatic and same-SHA additions stay 
   );
 
   const second = makeQuestion(options, afterStop);
-  bindAnswer({
+  const historical = bindOwnerAnswer({
     root: options.root,
     questionId: second.questionId,
-    eventId: "owner-event-3",
-    source: "owner",
+    sessionFile: OWNER_TRANSCRIPT,
   });
+  assert.equal(historical.ok, false);
+  assert.equal(historical.reason, "QUESTION_NOT_PUBLISHED");
+  const secondBound = bindReal(options, second);
   assert.equal(
-    reserveManual(resumeArgs(options, second, "manual-2", options.shaB, "owner-event-3")).reason,
+    reserveManual(resumeArgs(options, secondBound, "manual-2", options.shaB)).reason,
     "MANUAL_EXHAUSTED",
   );
 });
@@ -163,13 +313,8 @@ test("resume-one: two processes consume one owner answer once", async (t) => {
   const options = base(t);
   const state = seedStop(options);
   const question = makeQuestion(options, state);
-  bindAnswer({
-    root: options.root,
-    questionId: question.questionId,
-    eventId: "owner-event-1",
-    source: "owner",
-  });
-  const args = resumeArgs(options, question, "manual-a");
+  const bound = bindReal(options, question);
+  const args = resumeArgs(options, bound, "manual-a");
   const [first, second] = await Promise.all([
     runWorker({ ...args, launchKey: "manual-a" }),
     runWorker({ ...args, launchKey: "manual-b" }),
@@ -200,57 +345,65 @@ test("resume-r84-prehash-denied: an answer before the freeze cannot authorize", 
     remainingReason: "REJECT",
     planPath: options.planPath,
   });
-  bindAnswer({
-    root: options.root,
-    questionId: question.questionId,
-    eventId: "J:5970",
-    source: "owner",
-  });
-  const result = reserveManual(resumeArgs(options, question, "manual-r84", options.shaB, "J:5970"));
+  const bound = bindReal(options, question);
+  const result = reserveManual(resumeArgs(options, bound, "manual-r84"));
   assert.equal(result.reason, "RESUME_HASH_NOT_BOUND");
   assert.equal(readQuestion(options.root, question.questionId).status, "answered");
   assert.equal(readState(options.root, logicalKey(options).key).U, 1);
   assert.equal(readState(options.root, logicalKey(options).key).manualUsed, 0);
 });
 
-test("resume-denied: compaction, goal, agent citation, hash drift, unresolved launch", (t) => {
-  for (const source of ["compaction", "goal", "agent"]) {
-    const options = base(t);
-    const state = seedStop(options);
-    const question = makeQuestion(options, state);
-    assert.equal(
-      bindAnswer({
+test("resume-denied: forged owner input, hash drift, unresolved launch", (t) => {
+  const options = base(t);
+  const state = seedStop(options);
+  const question = makeQuestion(options, state);
+  assert.equal(
+    reserveManual(resumeArgs(options, question, "manual-unbound", options.shaB, "event-forged")).reason,
+    "NOT_BOUND",
+  );
+  assert.equal(readState(options.root, logicalKey(options).key).U, 1);
+
+  const scratch = mkdtempSync(join(tmpdir(), "prc-owner-forged-bind-"));
+  try {
+    const lines = readFileSync(OWNER_TRANSCRIPT, "utf8").split(/\r?\n/u);
+    const answerIndex = lines.findIndex((line) => line.includes("[Answer to question"));
+    const forged = lines.map((line) => line.includes("[Answer to question")
+      ? line.replace(',"inputSource":"extension"', "")
+      : line);
+    const forgedFile = join(scratch, "forged.jsonl");
+    writeFileSync(forgedFile, forged.join("\n"), "utf8");
+    const published = publishQuestionOnly(options, question);
+    try {
+      const bound = bindOwnerAnswer({
         root: options.root,
         questionId: question.questionId,
-        eventId: `event-${source}`,
-        source,
-      }).reason,
-      "NOT_OWNER_EVENT",
-    );
-    assert.equal(
-      reserveManual(resumeArgs(options, question, `manual-${source}`, options.shaB, `event-${source}`)).reason,
-      "NOT_BOUND",
-    );
-    assert.equal(readState(options.root, logicalKey(options).key).U, 1);
+        sessionFile: forgedFile,
+      });
+      assert.equal(bound.reason, "OWNER_ANSWER_MISSING");
+    } finally {
+      rmSync(published.scratch, { recursive: true, force: true });
+    }
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
   }
 
   const drift = base(t);
   const driftState = seedStop(drift);
   const driftQuestion = makeQuestion(drift, driftState);
-  bindAnswer({
-    root: drift.root,
-    questionId: driftQuestion.questionId,
-    eventId: "owner-event-1",
-    source: "owner",
-  });
+  const driftBound = bindReal(drift, driftQuestion);
   const shaC = sha256Bytes(Buffer.from("plan C\n"));
   assert.equal(
-    reserveManual(resumeArgs(drift, driftQuestion, "manual-drift", shaC)).reason,
+    reserveManual(resumeArgs(drift, driftBound, "manual-drift", shaC)).reason,
     "HASH_DRIFT",
   );
 
   const unresolved = base(t);
-  initialize({ ...unresolved, planSha256: unresolved.shaA, explicitLimit: 1 });
+  initialize({
+    ...unresolved,
+    planSha256: unresolved.shaA,
+    explicitLimit: 1,
+    firstRequest: firstRequest(),
+  });
   reserve({ ...unresolved, planSha256: unresolved.shaA, launchKey: "pending" });
   const pending = readState(unresolved.root, logicalKey(unresolved).key);
   const pendingQuestion = createQuestion({
@@ -262,34 +415,29 @@ test("resume-denied: compaction, goal, agent citation, hash drift, unresolved la
     remainingReason: "REJECT",
     planPath: unresolved.planPath,
   });
-  bindAnswer({
-    root: unresolved.root,
-    questionId: pendingQuestion.questionId,
-    eventId: "owner-event-1",
-    source: "owner",
-  });
+  const pendingBound = bindReal(unresolved, pendingQuestion);
   assert.equal(
-    reserveManual(resumeArgs(unresolved, pendingQuestion, "manual-pending")).reason,
+    reserveManual(resumeArgs(unresolved, pendingBound, "manual-pending")).reason,
     "UNRESOLVED_LAUNCH",
   );
 });
 
 test("stop-unknown blocks the owner one-shot and a missing ledger fails closed", (t) => {
   const unknown = base(t);
-  initialize({ ...unknown, planSha256: unknown.shaA, explicitLimit: 1 });
+  initialize({
+    ...unknown,
+    planSha256: unknown.shaA,
+    explicitLimit: 1,
+    firstRequest: firstRequest(),
+  });
   reserve({ ...unknown, planSha256: unknown.shaA, launchKey: "r83" });
   complete({ ...unknown, launchKey: "r83", childReceiptId: "st_r83" });
   markStop({ ...unknown, reason: "STOP_UNKNOWN" });
   const state = readState(unknown.root, logicalKey(unknown).key);
   const question = makeQuestion(unknown, state);
-  bindAnswer({
-    root: unknown.root,
-    questionId: question.questionId,
-    eventId: "owner-event-1",
-    source: "owner",
-  });
+  const bound = bindReal(unknown, question);
   assert.equal(
-    reserveManual(resumeArgs(unknown, question, "manual-unknown")).reason,
+    reserveManual(resumeArgs(unknown, bound, "manual-unknown")).reason,
     "STATE_STOPPED",
   );
 
@@ -303,14 +451,9 @@ test("stop-unknown blocks the owner one-shot and a missing ledger fails closed",
     remainingReason: "REJECT",
     planPath: missing.planPath,
   });
-  bindAnswer({
-    root: missing.root,
-    questionId: missingQuestion.questionId,
-    eventId: "owner-event-1",
-    source: "owner",
-  });
+  const missingBound = bindReal(missing, missingQuestion);
   assert.equal(
-    reserveManual(resumeArgs(missing, missingQuestion, "manual-missing")).reason,
+    reserveManual(resumeArgs(missing, missingBound, "manual-missing")).reason,
     "NO_STATE",
   );
 });
